@@ -57,7 +57,7 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		eventID := r.Header.Get("X-Razorpay-Event-Id")
 		signature := r.Header.Get("X-Razorpay-Signature")
 
-		webhookSecret := os.Getenv("RAZORPAY_WEBHOOK_SECRET")
+		webhookSecret := strings.TrimSpace(os.Getenv("RAZORPAY_WEBHOOK_SECRET"))
 		if webhookSecret == "" {
 			webhookSecret = "test_webhook_secret_12345" // Safe development default
 		}
