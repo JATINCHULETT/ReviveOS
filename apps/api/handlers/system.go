@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -231,67 +232,110 @@ func SystemHealthHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			},
 		})
 
-		// 5. Ollama & DeepSeek
-		ollamaURL := os.Getenv("OLLAMA_URL")
-		if ollamaURL == "" {
-			ollamaURL = "http://localhost:11434"
-		}
-		ollamaStart := time.Now()
-		ollamaStatus := "HEALTHY"
-		ollamaMsg := "Ollama service online"
-		deepseekStatus := "AVAILABLE"
-		deepseekMsg := "deepseek-r1:1.5b loaded"
+		// 4 & 5. AI Engine & Model Check (NVIDIA NIM or Ollama)
+		aiProviderType := os.Getenv("AI_PROVIDER")
+		nvidiaKey := os.Getenv("NVIDIA_API_KEY")
 
-		client := &http.Client{Timeout: 2 * time.Second}
-		req, _ := http.NewRequestWithContext(ctx, "GET", ollamaURL+"/api/tags", nil)
-		resp, err := client.Do(req)
-		if err != nil {
-			ollamaStatus = "UNHEALTHY"
-			ollamaMsg = err.Error()
-			deepseekStatus = "UNAVAILABLE"
-			deepseekMsg = "Cannot verify model (Ollama unreachable)"
-			allHealthy = false
-		} else {
-			defer resp.Body.Close()
-			if resp.StatusCode != http.StatusOK {
-				ollamaStatus = "UNHEALTHY"
-				ollamaMsg = fmt.Sprintf("HTTP status %d", resp.StatusCode)
-				deepseekStatus = "UNAVAILABLE"
+		if nvidiaKey != "" || aiProviderType == "nvidia" {
+			// Check NVIDIA NIM
+			nimBaseURL := os.Getenv("NVIDIA_BASE_URL")
+			if nimBaseURL == "" {
+				nimBaseURL = "https://integrate.api.nvidia.com/v1"
+			}
+			nimModel := os.Getenv("NVIDIA_MODEL")
+			if nimModel == "" {
+				nimModel = "deepseek-ai/deepseek-v4-flash-0731"
+			}
+
+			nimStart := time.Now()
+			nimStatus := "HEALTHY"
+			nimMsg := "NVIDIA NIM Cloud online"
+			modelStatus := "AVAILABLE"
+			modelMsg := fmt.Sprintf("%s active", nimModel)
+
+			client := &http.Client{Timeout: 3 * time.Second}
+			req, _ := http.NewRequestWithContext(ctx, "GET", strings.TrimRight(nimBaseURL, "/")+"/models", nil)
+			req.Header.Set("Authorization", "Bearer "+nvidiaKey)
+			resp, err := client.Do(req)
+			if err != nil {
+				nimStatus = "UNHEALTHY"
+				nimMsg = err.Error()
+				modelStatus = "UNAVAILABLE"
+				modelMsg = "Cannot verify NVIDIA model"
+				allHealthy = false
 			} else {
-				var tagsResp struct {
-					Models []struct {
-						Name string `json:"name"`
-					} `json:"models"`
-				}
-				if err := json.NewDecoder(resp.Body).Decode(&tagsResp); err == nil {
-					foundModel := false
-					for _, m := range tagsResp.Models {
-						if m.Name == "deepseek-r1:1.5b" || m.Name == "deepseek-r1:1.5b-latest" {
-							foundModel = true
-							break
-						}
-					}
-					if !foundModel {
-						deepseekStatus = "UNAVAILABLE"
-						deepseekMsg = "deepseek-r1:1.5b model not pulled"
-					}
+				resp.Body.Close()
+				if resp.StatusCode != http.StatusOK {
+					nimStatus = "UNHEALTHY"
+					nimMsg = fmt.Sprintf("HTTP status %d", resp.StatusCode)
+					modelStatus = "UNAVAILABLE"
+					modelMsg = "Invalid API Key or unauthorized"
+					allHealthy = false
 				}
 			}
+
+			components = append(components, ComponentStatus{
+				Name:      "NVIDIA NIM Engine",
+				Status:    nimStatus,
+				LatencyMs: time.Since(nimStart).Milliseconds(),
+				Message:   nimMsg,
+			})
+
+			components = append(components, ComponentStatus{
+				Name:      "DeepSeek-V4 Flash",
+				Status:    modelStatus,
+				LatencyMs: time.Since(nimStart).Milliseconds(),
+				Message:   modelMsg,
+			})
+		} else {
+			// Check Ollama
+			ollamaURL := os.Getenv("OLLAMA_URL")
+			if ollamaURL == "" {
+				ollamaURL = "http://localhost:11434"
+			}
+			ollamaModel := os.Getenv("OLLAMA_MODEL")
+			if ollamaModel == "" {
+				ollamaModel = "deepseek-r1:1.5b"
+			}
+
+			ollamaStart := time.Now()
+			ollamaStatus := "HEALTHY"
+			ollamaMsg := "Ollama service online"
+			deepseekStatus := "AVAILABLE"
+			deepseekMsg := fmt.Sprintf("%s loaded", ollamaModel)
+
+			client := &http.Client{Timeout: 2 * time.Second}
+			req, _ := http.NewRequestWithContext(ctx, "GET", ollamaURL+"/api/tags", nil)
+			resp, err := client.Do(req)
+			if err != nil {
+				ollamaStatus = "UNHEALTHY"
+				ollamaMsg = err.Error()
+				deepseekStatus = "UNAVAILABLE"
+				deepseekMsg = "Cannot verify model (Ollama unreachable)"
+				allHealthy = false
+			} else {
+				defer resp.Body.Close()
+				if resp.StatusCode != http.StatusOK {
+					ollamaStatus = "UNHEALTHY"
+					ollamaMsg = fmt.Sprintf("HTTP status %d", resp.StatusCode)
+					deepseekStatus = "UNAVAILABLE"
+				}
+			}
+
+			components = append(components, ComponentStatus{
+				Name:      "Ollama Engine",
+				Status:    ollamaStatus,
+				LatencyMs: time.Since(ollamaStart).Milliseconds(),
+				Message:   ollamaMsg,
+			})
+
+			components = append(components, ComponentStatus{
+				Name:      "DeepSeek-R1",
+				Status:    deepseekStatus,
+				LatencyMs: time.Since(ollamaStart).Milliseconds(),
+				Message:   deepseekMsg,
+			})
 		}
-
-		components = append(components, ComponentStatus{
-			Name:      "Ollama",
-			Status:    ollamaStatus,
-			LatencyMs: time.Since(ollamaStart).Milliseconds(),
-			Message:   ollamaMsg,
-		})
-
-		components = append(components, ComponentStatus{
-			Name:      "DeepSeek-R1 (1.5B)",
-			Status:    deepseekStatus,
-			LatencyMs: time.Since(ollamaStart).Milliseconds(),
-			Message:   deepseekMsg,
-		})
 
 		// 6. Payment Provider
 		provType := os.Getenv("PAYMENT_PROVIDER")

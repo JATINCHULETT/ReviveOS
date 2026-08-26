@@ -11,6 +11,7 @@ import (
 
 	"github.com/reviveos/api/handlers"
 	"github.com/reviveos/utils/db"
+	"github.com/reviveos/worker/runner"
 )
 
 func main() {
@@ -32,6 +33,14 @@ func main() {
 
 	log.Println("Database connection pool initialized.")
 
+	// Server run context for graceful shutdown
+	serverCtx, serverStopCtx := context.WithCancel(context.Background())
+
+	// Start Embedded Outbox Relay & Asynq Worker unless explicitly disabled
+	if os.Getenv("ENABLE_EMBEDDED_WORKER") != "false" {
+		go runner.StartEmbeddedWorker(serverCtx, pool)
+	}
+
 	handler := handlers.RegisterRoutes(pool)
 
 	server := &http.Server{
@@ -41,9 +50,6 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
-
-	// Server run context for graceful shutdown
-	serverCtx, serverStopCtx := context.WithCancel(context.Background())
 
 	// Listen for syscall signals for process to interrupt/quit
 	sig := make(chan os.Signal, 1)
