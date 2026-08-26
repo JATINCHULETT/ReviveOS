@@ -12,7 +12,11 @@ import (
 
 // Connect returns a connection pool to the database
 func Connect(ctx context.Context) (*pgxpool.Pool, error) {
-	connStr := os.Getenv("DATABASE_URL")
+	connStr := strings.TrimSpace(os.Getenv("DATABASE_URL"))
+	connStr = strings.ReplaceAll(connStr, "\r", "")
+	connStr = strings.ReplaceAll(connStr, "\n", "")
+	connStr = strings.ReplaceAll(connStr, "\t", "")
+
 	if connStr == "" {
 		connStr = "postgres://postgres:postgres@localhost:5432/reviveos?sslmode=disable"
 	}

@@ -13,7 +13,11 @@ import (
 
 // GetRedisOpt parses REDIS_URL from environment or returns default options
 func GetRedisOpt() asynq.RedisConnOpt {
-	redisURL := os.Getenv("REDIS_URL")
+	redisURL := strings.TrimSpace(os.Getenv("REDIS_URL"))
+	redisURL = strings.ReplaceAll(redisURL, "\r", "")
+	redisURL = strings.ReplaceAll(redisURL, "\n", "")
+	redisURL = strings.ReplaceAll(redisURL, "\t", "")
+
 	if redisURL == "" {
 		redisURL = "redis://localhost:6379/0"
 	}
@@ -38,7 +42,11 @@ func GetRedisOpt() asynq.RedisConnOpt {
 
 // PingRedis checks connectivity to Redis
 func PingRedis(ctx context.Context) error {
-	redisURL := os.Getenv("REDIS_URL")
+	redisURL := strings.TrimSpace(os.Getenv("REDIS_URL"))
+	redisURL = strings.ReplaceAll(redisURL, "\r", "")
+	redisURL = strings.ReplaceAll(redisURL, "\n", "")
+	redisURL = strings.ReplaceAll(redisURL, "\t", "")
+
 	if redisURL == "" {
 		redisURL = "redis://localhost:6379/0"
 	}
