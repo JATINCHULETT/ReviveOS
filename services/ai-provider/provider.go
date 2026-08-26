@@ -2,6 +2,7 @@ package aiprovider
 
 import (
 	"context"
+	"os"
 
 	"github.com/reviveos/packages/recovery"
 	"github.com/reviveos/packages/types"
@@ -38,4 +39,22 @@ type AIContext struct {
 type Provider interface {
 	RecommendStrategy(ctx context.Context, input AIContext) (*AIRecommendation, error)
 	CheckModelAvailable(ctx context.Context) (bool, error)
+}
+
+// NewAIProvider creates the active AI provider based on environment configuration.
+func NewAIProvider() Provider {
+	// If NVIDIA API Key is provided, prioritize NVIDIA NIM
+	if os.Getenv("NVIDIA_API_KEY") != "" {
+		return NewNvidiaNIMProvider(
+			os.Getenv("NVIDIA_BASE_URL"),
+			os.Getenv("NVIDIA_API_KEY"),
+			os.Getenv("NVIDIA_MODEL"),
+		)
+	}
+
+	// Fallback to Ollama
+	return NewOllamaProvider(
+		os.Getenv("OLLAMA_URL"),
+		os.Getenv("OLLAMA_MODEL"),
+	)
 }

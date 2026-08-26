@@ -135,11 +135,11 @@ func TestOllamaProvider_FallbackOnUnavailable(t *testing.T) {
 func TestCleanJSON(t *testing.T) {
 	inputWithThink := "<think>\nThinking process...\nRecommended action is DELAYED_RETRY.\n</think>\n```json\n{\n  \"diagnosis\": \"Soft card decline due to timeout\",\n  \"recoverability\": 0.85,\n  \"recommended_action\": \"DELAYED_RETRY\",\n  \"recommended_delay_hours\": 12,\n  \"reason\": \"Temporary network timeout\",\n  \"confidence\": 0.90\n}\n```"
 
-	cleaned := cleanJSON(inputWithThink)
+	cleaned := CleanJSON(inputWithThink)
 	expectedStart := "{"
 	expectedEnd := "}"
 
 	if len(cleaned) == 0 || !strings.HasPrefix(cleaned, expectedStart) || !strings.HasSuffix(cleaned, expectedEnd) {
-		t.Fatalf("cleanJSON failed: result was '%s'", cleaned)
+		t.Fatalf("CleanJSON failed: result was '%s'", cleaned)
 	}
 }

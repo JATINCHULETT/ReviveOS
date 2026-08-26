@@ -40,7 +40,7 @@ func NewOllamaProvider(url, model string) *OllamaProvider {
 		URL:   url,
 		Model: model,
 		Client: &http.Client{
-			Timeout: 30 * time.Second, // Timeout for local LLM inference
+			Timeout: 45 * time.Second, // Timeout for local LLM inference
 		},
 	}
 }
@@ -89,8 +89,8 @@ func (o *OllamaProvider) CheckModelAvailable(ctx context.Context) (bool, error) 
 	return false, nil
 }
 
-// cleanJSON extracts and sanitizes raw JSON from LLM output.
-func cleanJSON(raw string) string {
+// CleanJSON extracts and sanitizes raw JSON from LLM output.
+func CleanJSON(raw string) string {
 	cleaned := thinkTagRegex.ReplaceAllString(raw, "")
 	cleaned = strings.TrimSpace(cleaned)
 
@@ -155,6 +155,7 @@ Allowed recommended_action values: IMMEDIATE_RETRY, DELAYED_RETRY, PAYMENT_METHO
 		"stream": false,
 		"options": map[string]interface{}{
 			"temperature": 0.1,
+			"num_predict": 2048,
 		},
 	}
 
@@ -190,7 +191,7 @@ Allowed recommended_action values: IMMEDIATE_RETRY, DELAYED_RETRY, PAYMENT_METHO
 	}
 
 	rawContent := chatResponse.Message.Content
-	cleanedOutput := cleanJSON(rawContent)
+	cleanedOutput := CleanJSON(rawContent)
 
 	// Flexible parsing map to handle string/numeric variations from LLM
 	var rawMap map[string]interface{}

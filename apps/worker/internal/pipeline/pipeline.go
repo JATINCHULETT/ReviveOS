@@ -40,7 +40,7 @@ func NewPipeline(pool *pgxpool.Pool) *Pipeline {
 		pool:       pool,
 		classifier: types.NewClassifier(),
 		probModel:  recovery.NewProbabilityModel(),
-		aiProvider: aiprovider.NewOllamaProvider("", ""),
+		aiProvider: aiprovider.NewAIProvider(),
 	}
 }
 
