@@ -320,3 +320,32 @@ func SystemHealthHandler(pool *pgxpool.Pool) http.HandlerFunc {
 	}
 }
 
+// RootHandler handles requests to "/" providing service metadata and API endpoints directory.
+func RootHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+
+	response := map[string]interface{}{
+		"status":      "online",
+		"service":     "ReviveOS Autonomous Payment Recovery API",
+		"version":     "1.0.0",
+		"environment": os.Getenv("APP_ENV"),
+		"timestamp":   time.Now().UTC(),
+		"endpoints": map[string]string{
+			"health":             "/health",
+			"system_health":      "/system/health",
+			"system_queues":      "/system/queues",
+			"workflows":          "/workflows",
+			"analytics_overview": "/analytics/overview",
+			"razorpay_webhook":   "/webhooks/razorpay",
+		},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(response)
+}
+
+

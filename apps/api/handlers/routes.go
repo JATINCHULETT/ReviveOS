@@ -37,6 +37,9 @@ func CORSMiddleware(next http.Handler) http.Handler {
 func RegisterRoutes(pool *pgxpool.Pool) http.Handler {
 	mux := http.NewServeMux()
 
+	// 0. Root Endpoint
+	mux.HandleFunc("/", RootHandler)
+
 	// 1. Health & Readiness
 	mux.HandleFunc("/health", HealthHandler)
 	mux.HandleFunc("/ready", HealthHandler)
