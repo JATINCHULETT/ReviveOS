@@ -1,0 +1,8 @@
+.env
+*.exe
+*.exe~
+node_modules/
+.next/
+dist/
+build/
+coverage/

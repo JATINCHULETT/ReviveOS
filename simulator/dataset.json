@@ -1,0 +1,1102 @@
+[
+  {
+    "payment_id": "pay_1787587461_1",
+    "customer_id": "cust_995",
+    "subscription_id": "sub_89",
+    "amount": 5555,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "TRANSIENT_ERROR",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 10,
+      "failed_payments": 0
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": false,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_2",
+    "customer_id": "cust_119",
+    "subscription_id": "sub_58",
+    "amount": 5980,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "EXPIRED_CARD",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 1,
+      "failed_payments": 2
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_3",
+    "customer_id": "cust_743",
+    "subscription_id": "sub_61",
+    "amount": 5456,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "INSUFFICIENT_FUNDS",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 2,
+      "failed_payments": 1
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 24
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_4",
+    "customer_id": "cust_20",
+    "subscription_id": "sub_59",
+    "amount": 2930,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "CUSTOMER_ACTION_REQUIRED",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 0,
+      "failed_payments": 1
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_5",
+    "customer_id": "cust_391",
+    "subscription_id": "sub_91",
+    "amount": 1240,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "CUSTOMER_ACTION_REQUIRED",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 9,
+      "failed_payments": 2
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_6",
+    "customer_id": "cust_114",
+    "subscription_id": "sub_99",
+    "amount": 8637,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "EXPIRED_CARD",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 11,
+      "failed_payments": 2
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_7",
+    "customer_id": "cust_687",
+    "subscription_id": "sub_65",
+    "amount": 1909,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "TRANSIENT_ERROR",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 1,
+      "failed_payments": 1
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": false,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_8",
+    "customer_id": "cust_387",
+    "subscription_id": "sub_88",
+    "amount": 1433,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "TRANSIENT_ERROR",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 3,
+      "failed_payments": 2
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": false,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_9",
+    "customer_id": "cust_302",
+    "subscription_id": "sub_46",
+    "amount": 8711,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "INSUFFICIENT_FUNDS",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 11,
+      "failed_payments": 0
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 24
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_10",
+    "customer_id": "cust_441",
+    "subscription_id": "sub_98",
+    "amount": 1875,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "EXPIRED_CARD",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 4,
+      "failed_payments": 1
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_11",
+    "customer_id": "cust_829",
+    "subscription_id": "sub_11",
+    "amount": 7380,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "MANDATE_FAILED",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 1,
+      "failed_payments": 2
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_12",
+    "customer_id": "cust_450",
+    "subscription_id": "sub_72",
+    "amount": 3431,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "EXPIRED_CARD",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 10,
+      "failed_payments": 1
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_13",
+    "customer_id": "cust_343",
+    "subscription_id": "sub_31",
+    "amount": 8283,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "INSUFFICIENT_FUNDS",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 11,
+      "failed_payments": 0
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 24
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_14",
+    "customer_id": "cust_155",
+    "subscription_id": "sub_78",
+    "amount": 3093,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "INSUFFICIENT_FUNDS",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 2,
+      "failed_payments": 1
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 24
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_15",
+    "customer_id": "cust_988",
+    "subscription_id": "sub_83",
+    "amount": 7230,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "INSUFFICIENT_FUNDS",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 9,
+      "failed_payments": 1
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 24
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_16",
+    "customer_id": "cust_937",
+    "subscription_id": "sub_87",
+    "amount": 7798,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "TRANSIENT_ERROR",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 9,
+      "failed_payments": 2
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": false,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_17",
+    "customer_id": "cust_727",
+    "subscription_id": "sub_47",
+    "amount": 8682,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "EXPIRED_CARD",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 4,
+      "failed_payments": 1
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_18",
+    "customer_id": "cust_52",
+    "subscription_id": "sub_21",
+    "amount": 3097,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "EXPIRED_CARD",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 8,
+      "failed_payments": 0
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_19",
+    "customer_id": "cust_324",
+    "subscription_id": "sub_21",
+    "amount": 6108,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "AUTHENTICATION_FAILED",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 5,
+      "failed_payments": 2
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_20",
+    "customer_id": "cust_715",
+    "subscription_id": "sub_35",
+    "amount": 5325,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "INSUFFICIENT_FUNDS",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 2,
+      "failed_payments": 0
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 24
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_21",
+    "customer_id": "cust_258",
+    "subscription_id": "sub_44",
+    "amount": 2038,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "EXPIRED_CARD",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 0,
+      "failed_payments": 1
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_22",
+    "customer_id": "cust_632",
+    "subscription_id": "sub_37",
+    "amount": 7011,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "TRANSIENT_ERROR",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 10,
+      "failed_payments": 1
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": false,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_23",
+    "customer_id": "cust_169",
+    "subscription_id": "sub_46",
+    "amount": 2573,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "TRANSIENT_ERROR",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 11,
+      "failed_payments": 1
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": false,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_24",
+    "customer_id": "cust_563",
+    "subscription_id": "sub_39",
+    "amount": 5293,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "TRANSIENT_ERROR",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 1,
+      "failed_payments": 2
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": false,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_25",
+    "customer_id": "cust_505",
+    "subscription_id": "sub_2",
+    "amount": 8304,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "NETWORK_ERROR",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 6,
+      "failed_payments": 2
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": true,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": false,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_26",
+    "customer_id": "cust_307",
+    "subscription_id": "sub_19",
+    "amount": 4971,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "EXPIRED_CARD",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 0,
+      "failed_payments": 0
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_27",
+    "customer_id": "cust_813",
+    "subscription_id": "sub_91",
+    "amount": 8111,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "UNKNOWN_ERROR",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 4,
+      "failed_payments": 1
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": false,
+      "would_never_recover": true,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_28",
+    "customer_id": "cust_516",
+    "subscription_id": "sub_3",
+    "amount": 7797,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "AUTHENTICATION_FAILED",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 5,
+      "failed_payments": 0
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_29",
+    "customer_id": "cust_182",
+    "subscription_id": "sub_66",
+    "amount": 2955,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "INSUFFICIENT_FUNDS",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 10,
+      "failed_payments": 2
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 24
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_30",
+    "customer_id": "cust_441",
+    "subscription_id": "sub_89",
+    "amount": 6435,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "EXPIRED_CARD",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 2,
+      "failed_payments": 0
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_31",
+    "customer_id": "cust_680",
+    "subscription_id": "sub_5",
+    "amount": 3397,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "INSUFFICIENT_FUNDS",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 11,
+      "failed_payments": 2
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 24
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_32",
+    "customer_id": "cust_35",
+    "subscription_id": "sub_99",
+    "amount": 4895,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "EXPIRED_CARD",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 5,
+      "failed_payments": 0
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_33",
+    "customer_id": "cust_514",
+    "subscription_id": "sub_23",
+    "amount": 5649,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "INSUFFICIENT_FUNDS",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 1,
+      "failed_payments": 2
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 24
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_34",
+    "customer_id": "cust_287",
+    "subscription_id": "sub_60",
+    "amount": 9029,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "EXPIRED_CARD",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 5,
+      "failed_payments": 1
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_35",
+    "customer_id": "cust_768",
+    "subscription_id": "sub_57",
+    "amount": 1356,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "AUTHENTICATION_FAILED",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 0,
+      "failed_payments": 1
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_36",
+    "customer_id": "cust_265",
+    "subscription_id": "sub_97",
+    "amount": 4313,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "TRANSIENT_ERROR",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 3,
+      "failed_payments": 2
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": false,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_37",
+    "customer_id": "cust_5",
+    "subscription_id": "sub_84",
+    "amount": 4189,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "INSUFFICIENT_FUNDS",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 2,
+      "failed_payments": 2
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 24
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_38",
+    "customer_id": "cust_621",
+    "subscription_id": "sub_43",
+    "amount": 3641,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "INSUFFICIENT_FUNDS",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 5,
+      "failed_payments": 0
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 24
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_39",
+    "customer_id": "cust_842",
+    "subscription_id": "sub_70",
+    "amount": 2215,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "AUTHENTICATION_FAILED",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 6,
+      "failed_payments": 0
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_40",
+    "customer_id": "cust_928",
+    "subscription_id": "sub_98",
+    "amount": 4322,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "NETWORK_ERROR",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 9,
+      "failed_payments": 0
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": true,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": false,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_41",
+    "customer_id": "cust_702",
+    "subscription_id": "sub_47",
+    "amount": 9575,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "TRANSIENT_ERROR",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 5,
+      "failed_payments": 2
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": false,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_42",
+    "customer_id": "cust_747",
+    "subscription_id": "sub_30",
+    "amount": 6189,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "AUTHENTICATION_FAILED",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1326087+05:30",
+    "customer_history": {
+      "successful_payments": 0,
+      "failed_payments": 0
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_43",
+    "customer_id": "cust_293",
+    "subscription_id": "sub_28",
+    "amount": 2958,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "TRANSIENT_ERROR",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1332036+05:30",
+    "customer_history": {
+      "successful_payments": 7,
+      "failed_payments": 0
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": false,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_44",
+    "customer_id": "cust_58",
+    "subscription_id": "sub_63",
+    "amount": 5070,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "TRANSIENT_ERROR",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1332036+05:30",
+    "customer_history": {
+      "successful_payments": 2,
+      "failed_payments": 1
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": true,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": false,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_45",
+    "customer_id": "cust_79",
+    "subscription_id": "sub_1",
+    "amount": 1803,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "TRANSIENT_ERROR",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1332036+05:30",
+    "customer_history": {
+      "successful_payments": 5,
+      "failed_payments": 1
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": false,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_46",
+    "customer_id": "cust_0",
+    "subscription_id": "sub_29",
+    "amount": 6487,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "INSUFFICIENT_FUNDS",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1332036+05:30",
+    "customer_history": {
+      "successful_payments": 9,
+      "failed_payments": 0
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 24
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_47",
+    "customer_id": "cust_854",
+    "subscription_id": "sub_71",
+    "amount": 3806,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "TRANSIENT_ERROR",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1332036+05:30",
+    "customer_history": {
+      "successful_payments": 5,
+      "failed_payments": 1
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": false,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_48",
+    "customer_id": "cust_679",
+    "subscription_id": "sub_48",
+    "amount": 3823,
+    "currency": "INR",
+    "payment_method": "upi",
+    "failure_code": "TRANSIENT_ERROR",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1332036+05:30",
+    "customer_history": {
+      "successful_payments": 5,
+      "failed_payments": 1
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": true,
+      "would_recover_after_retry": true,
+      "would_recover_after_customer": false,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_49",
+    "customer_id": "cust_458",
+    "subscription_id": "sub_62",
+    "amount": 1258,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "EXPIRED_CARD",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1332036+05:30",
+    "customer_history": {
+      "successful_payments": 1,
+      "failed_payments": 1
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  },
+  {
+    "payment_id": "pay_1787587461_50",
+    "customer_id": "cust_104",
+    "subscription_id": "sub_31",
+    "amount": 7881,
+    "currency": "INR",
+    "payment_method": "card",
+    "failure_code": "AUTHENTICATION_FAILED",
+    "attempt_number": 1,
+    "timestamp": "2026-08-24T21:34:21.1332036+05:30",
+    "customer_history": {
+      "successful_payments": 5,
+      "failed_payments": 0
+    },
+    "simulated_ground_truth": {
+      "would_recover_naturally": false,
+      "would_recover_after_retry": false,
+      "would_recover_after_customer": true,
+      "would_never_recover": false,
+      "optimal_retry_timing_offset_hs": 0
+    }
+  }
+]
