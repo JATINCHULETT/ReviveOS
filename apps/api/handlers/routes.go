@@ -60,5 +60,16 @@ func RegisterRoutes(pool *pgxpool.Pool) http.Handler {
 	mux.HandleFunc("/webhooks/razorpay", RazorpayWebhookHandler(pool))
 	mux.HandleFunc("/api/v1/webhooks/razorpay", RazorpayWebhookHandler(pool))
 
+	// 6. Authentication & Roles
+	mux.HandleFunc("/auth/login", AuthLoginHandler(pool))
+	mux.HandleFunc("/auth/register", AuthRegisterHandler(pool))
+	mux.HandleFunc("/auth/me", AuthMeHandler(pool))
+
+	// 7. Multi-Merchant & Merchant Portal APIs
+	mux.HandleFunc("/merchants", MerchantsListHandler(pool))
+	mux.HandleFunc("/merchant/dashboard", MerchantDashboardHandler(pool))
+	mux.HandleFunc("/merchant/subscriptions", MerchantCreateSubscriptionHandler(pool))
+	mux.HandleFunc("/merchant/sandbox/payment-link", MerchantSandboxPaymentLinkHandler(pool))
+
 	return LoggingMiddleware(CORSMiddleware(mux))
 }

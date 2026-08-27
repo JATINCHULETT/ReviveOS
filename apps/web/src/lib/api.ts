@@ -68,3 +68,56 @@ export async function getSystemHealth(): Promise<SystemHealthResponse> {
 export async function getSystemQueues(): Promise<SystemQueuesResponse> {
   return fetchJSON<SystemQueuesResponse>('/system/queues');
 }
+
+export async function loginUser(email: string, password: string):Promise<{ token: string; user: { id: string; email: string; name: string; role: string; merchant_id?: string } }> {
+  return fetchJSON('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export async function getMerchants(): Promise<any[]> {
+  return fetchJSON<any[]>('/merchants');
+}
+
+export async function createMerchant(data: { name: string; max_retries?: number; confidence_threshold?: number; amount_threshold?: number }): Promise<any> {
+  return fetchJSON('/merchants', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getMerchantDashboard(merchantId?: string): Promise<any> {
+  const qs = merchantId ? `?merchant_id=${encodeURIComponent(merchantId)}` : '';
+  return fetchJSON(`/merchant/dashboard${qs}`);
+}
+
+export async function createSubscription(data: {
+  merchant_id: string;
+  customer_email: string;
+  customer_phone?: string;
+  amount: number;
+  plan_id?: string;
+  billing_interval?: string;
+}): Promise<any> {
+  return fetchJSON('/merchant/subscriptions', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function createSandboxPaymentLink(data: {
+  merchant_id: string;
+  customer_email: string;
+  customer_phone?: string;
+  amount: number;
+  description?: string;
+  trigger_failure_immediately?: boolean;
+  failure_code?: string;
+}): Promise<any> {
+  return fetchJSON('/merchant/sandbox/payment-link', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+

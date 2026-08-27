@@ -7,7 +7,10 @@ import {
   GitBranch, 
   BarChart3, 
   Server, 
-  ShieldCheck
+  ShieldCheck,
+  Building2,
+  Shield,
+  LogIn
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -15,9 +18,12 @@ export default function Sidebar() {
 
   const navItems = [
     { label: 'Overview', href: '/', icon: LayoutDashboard },
+    { label: 'Merchant Portal', href: '/merchant', icon: Building2 },
+    { label: 'Admin Hub', href: '/admin', icon: Shield },
     { label: 'Workflows', href: '/workflows', icon: GitBranch },
     { label: 'Analytics', href: '/analytics', icon: BarChart3 },
     { label: 'System Health', href: '/system', icon: Server },
+    { label: 'Sign In / Roles', href: '/login', icon: LogIn },
   ];
 
   return (
