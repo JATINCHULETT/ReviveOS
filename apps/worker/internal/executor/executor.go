@@ -13,6 +13,7 @@ import (
 	"github.com/reviveos/packages/recovery"
 	"github.com/reviveos/schemas"
 	aiprovider "github.com/reviveos/services/ai-provider"
+	notificationservice "github.com/reviveos/services/notification-service"
 	paymentprovider "github.com/reviveos/services/payment-provider"
 	policy "github.com/reviveos/services/policy-engine"
 	"github.com/reviveos/utils/audit"
@@ -31,14 +32,16 @@ type ExecutionResult struct {
 	VerifiedStatus    *paymentprovider.PaymentStatus `json:"verified_status,omitempty"`
 	OutcomeRecorded   bool                           `json:"outcome_recorded"`
 	Recovered         bool                           `json:"recovered"`
+	NotificationSent  bool                           `json:"notification_sent,omitempty"`
 	Message           string                         `json:"message"`
 }
 
 // RecoveryExecutor orchestrates safe, reconciled recovery execution against a real PaymentProvider.
 type RecoveryExecutor struct {
-	pool         *pgxpool.Pool
-	provider     paymentprovider.PaymentProvider
-	policyEngine *policy.Engine
+	pool                 *pgxpool.Pool
+	provider             paymentprovider.PaymentProvider
+	policyEngine         *policy.Engine
+	notificationProvider notificationservice.NotificationProvider
 }
 
 // NewRecoveryExecutor initializes a new RecoveryExecutor instance.
@@ -52,10 +55,16 @@ func NewRecoveryExecutor(pool *pgxpool.Pool, provider paymentprovider.PaymentPro
 	}
 
 	return &RecoveryExecutor{
-		pool:         pool,
-		provider:     provider,
-		policyEngine: policy.NewEngine(pool),
+		pool:                 pool,
+		provider:             provider,
+		policyEngine:         policy.NewEngine(pool),
+		notificationProvider: notificationservice.NewNotificationProvider(""),
 	}
+}
+
+// SetNotificationProvider allows injecting custom notification providers (e.g. for testing)
+func (e *RecoveryExecutor) SetNotificationProvider(np notificationservice.NotificationProvider) {
+	e.notificationProvider = np
 }
 
 // ExecuteWorkflow runs the comprehensive pre-execution checks, reconciliation, execution, and verification.
@@ -331,6 +340,55 @@ func (e *RecoveryExecutor) ExecuteWorkflow(ctx context.Context, workflowID strin
 		WHERE id::text = $3
 	`, actionStatus, actionResultStr, actionUUID)
 
+	// Automated Customer Notification Dispatch for recovery links/notifications
+	if (actionStr == "PAYMENT_LINK" || actionStr == "CUSTOMER_NOTIFICATION" || actionStr == "PAYMENT_METHOD_UPDATE") &&
+		!communicationOptOut && customerEmail.Valid && customerEmail.String != "" && e.notificationProvider != nil {
+
+		var merchantName string
+		_ = e.pool.QueryRow(ctx, "SELECT name FROM merchants WHERE id::text = $1", merchantID).Scan(&merchantName)
+		if merchantName == "" {
+			merchantName = "ReviveOS Merchant"
+		}
+
+		paymentLink := fmt.Sprintf("https://checkout.reviveos.io/pay/%s", paymentID)
+		if retryResult != nil && retryResult.PaymentLinkURL != "" {
+			paymentLink = retryResult.PaymentLinkURL
+		}
+
+		notifReq := notificationservice.NotificationRequest{
+			PaymentID:     paymentID,
+			WorkflowID:    workflowID,
+			MerchantName:  merchantName,
+			CustomerEmail: customerEmail.String,
+			CustomerPhone: customerPhone.String,
+			Amount:        paymentAmount,
+			Currency:      paymentCurrency,
+			PaymentLink:   paymentLink,
+			FailureReason: failureCode.String,
+			ActionType:    actionStr,
+		}
+
+		notifRes, notifErr := e.notificationProvider.SendRecoveryNotification(ctx, notifReq)
+		if notifErr != nil {
+			log.Printf("[Executor] Warning: Notification dispatch failed: %v", notifErr)
+		} else if notifRes != nil && notifRes.Status == "SENT" {
+			res.NotificationSent = true
+			_ = audit.AppendAuditLog(ctx, e.pool, audit.AuditEvent{
+				WorkflowID: workflowID,
+				Actor:      "executor:notification",
+				Action:     "CUSTOMER_NOTIFICATION_SENT",
+				Metadata: map[string]interface{}{
+					"provider":   notifRes.Provider,
+					"message_id": notifRes.MessageID,
+					"recipient":  customerEmail.String,
+					"link":       paymentLink,
+				},
+			})
+			log.Printf("[Executor] CUSTOMER_NOTIFICATION_SENT: Dispatched to %s via %s (MsgID: %s)",
+				customerEmail.String, notifRes.Provider, notifRes.MessageID)
+		}
+	}
+
 	// 8. VERIFICATION via PaymentProvider.VerifyPayment()
 	verifiedStatus, verifyErr := e.provider.VerifyPayment(ctx, paymentID)
 	if verifyErr != nil {
@@ -354,6 +412,16 @@ func (e *RecoveryExecutor) ExecuteWorkflow(ctx context.Context, workflowID strin
 				INSERT INTO recovery_outcomes (action_id, payment_id, recovered, recovered_amount, time_to_recovery, created_at)
 				VALUES ($1, $2, true, $3, $4, CURRENT_TIMESTAMP)
 			`, actionUUID, paymentID, paymentAmount, time.Since(workflowCreatedAt).String())
+
+			// Restore recurring subscription status if attached
+			_, _ = tx.Exec(ctx, `
+				UPDATE subscriptions 
+				SET status = 'ACTIVE', 
+				    next_billing_at = CURRENT_TIMESTAMP + INTERVAL '1 month',
+				    updated_at = CURRENT_TIMESTAMP
+				WHERE id = (SELECT subscription_id FROM payments WHERE id::text = $1)
+			`, paymentID)
+
 			_ = tx.Commit(ctx)
 		}
 

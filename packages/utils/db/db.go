@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -48,14 +49,25 @@ func Connect(ctx context.Context) (*pgxpool.Pool, error) {
 		return nil, fmt.Errorf("unable to parse database url: %w", err)
 	}
 
-	pool, err := pgxpool.NewWithConfig(ctx, config)
-	if err != nil {
-		return nil, fmt.Errorf("unable to create connection pool: %w", err)
+	var lastPingErr error
+	for attempt := 1; attempt <= 3; attempt++ {
+		pool, err := pgxpool.NewWithConfig(ctx, config)
+		if err == nil {
+			if pingErr := pool.Ping(ctx); pingErr == nil {
+				return pool, nil
+			} else {
+				lastPingErr = pingErr
+				pool.Close()
+			}
+		} else {
+			lastPingErr = err
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(500 * time.Millisecond):
+		}
 	}
 
-	if err := pool.Ping(ctx); err != nil {
-		return nil, fmt.Errorf("unable to ping database: %w", err)
-	}
-
-	return pool, nil
+	return nil, fmt.Errorf("unable to ping database: %w", lastPingErr)
 }

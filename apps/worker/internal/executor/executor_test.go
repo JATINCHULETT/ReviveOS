@@ -337,3 +337,65 @@ func TestExecutor_CustomerOptOut_Blocked(t *testing.T) {
 
 	t.Logf("SUCCESS: Customer opt-out blocked communication action properly")
 }
+
+func TestExecutor_CustomerNotification_SentAndAudited(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	pool, err := db.Connect(ctx)
+	if err != nil {
+		t.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer pool.Close()
+
+	localProvider := paymentprovider.NewLocalPaymentProvider(pool)
+	exec := NewRecoveryExecutor(pool, localProvider)
+
+	var merchantID string
+	_ = pool.QueryRow(ctx, "INSERT INTO merchants (name) VALUES ($1) RETURNING id::text", fmt.Sprintf("M_Notif_%d", time.Now().UnixNano())).Scan(&merchantID)
+
+	var customerID string
+	custEmail := fmt.Sprintf("notify_%d@test.com", time.Now().UnixNano())
+	_ = pool.QueryRow(ctx, `
+		INSERT INTO customers (merchant_id, email, communication_opt_out) 
+		VALUES ($1, $2, false) 
+		RETURNING id::text
+	`, merchantID, custEmail).Scan(&customerID)
+
+	var paymentID string
+	_ = pool.QueryRow(ctx, `
+		INSERT INTO payments (merchant_id, customer_id, amount, status, method, failure_code)
+		VALUES ($1, $2, 3200.00, 'FAILED', 'card', 'EXPIRED_CARD')
+		RETURNING id::text
+	`, merchantID, customerID).Scan(&paymentID)
+
+	var workflowID string
+	_ = pool.QueryRow(ctx, `
+		INSERT INTO recovery_workflows (payment_id, status, selected_action)
+		VALUES ($1, 'PLANNED', 'PAYMENT_LINK')
+		RETURNING id::text
+	`, paymentID).Scan(&workflowID)
+
+	// Run Executor
+	res, err := exec.ExecuteWorkflow(ctx, workflowID)
+	if err != nil {
+		t.Fatalf("ExecuteWorkflow failed: %v", err)
+	}
+
+	if !res.NotificationSent {
+		t.Errorf("Expected NotificationSent=true, got false")
+	}
+
+	// Verify Audit Event logged in DB
+	var auditCount int
+	err = pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM audit_events 
+		WHERE workflow_id::text = $1 AND action = 'CUSTOMER_NOTIFICATION_SENT'
+	`, workflowID).Scan(&auditCount)
+	if err != nil || auditCount == 0 {
+		t.Errorf("Expected CUSTOMER_NOTIFICATION_SENT in audit_events, found %d records (err: %v)", auditCount, err)
+	}
+
+	t.Logf("SUCCESS: Recovery notification dispatched and logged to audit ledger with hash chaining.")
+}
+

@@ -266,12 +266,14 @@ func (p *Pipeline) AnalyzePayment(ctx context.Context, paymentIDOrExternal strin
 		},
 	}
 
-	// 11. Execute AI Inference via Ollama (or Safe Fallback if unavailable)
+	// 11. Execute AI Inference via Ollama / NVIDIA (or Safe Fallback if unavailable)
 	var aiRec *aiprovider.AIRecommendation
 	if p.aiProvider != nil {
-		rec, err := p.aiProvider.RecommendStrategy(ctx, aiCtx)
+		inferCtx, cancelInfer := context.WithTimeout(ctx, 15*time.Second)
+		rec, err := p.aiProvider.RecommendStrategy(inferCtx, aiCtx)
+		cancelInfer()
 		if err != nil {
-			log.Printf("[Pipeline] Ollama inference error (%v), activating safe fallback", err)
+			log.Printf("[Pipeline] AI inference error (%v), activating safe fallback", err)
 			aiRec = aiprovider.SafeFallback(aiCtx, err)
 		} else {
 			aiRec = rec

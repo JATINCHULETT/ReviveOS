@@ -48,7 +48,7 @@ func NewNvidiaNIMProvider(baseURL, apiKey, model string) *NvidiaNIMProvider {
 		APIKey:  apiKey,
 		Model:   model,
 		Client: &http.Client{
-			Timeout: 45 * time.Second,
+			Timeout: 15 * time.Second,
 		},
 	}
 }

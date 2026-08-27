@@ -33,6 +33,8 @@ type RazorpayWebhookPayload struct {
 				Description      string `json:"description"`
 				Email            string `json:"email"`
 				Contact          string `json:"contact"`
+				SubscriptionID   string `json:"subscription_id,omitempty"`
+				InvoiceID        string `json:"invoice_id,omitempty"`
 				ErrorCode        string `json:"error_code"`
 				ErrorDescription string `json:"error_description"`
 				ErrorSource      string `json:"error_source"`
@@ -41,6 +43,15 @@ type RazorpayWebhookPayload struct {
 				CreatedAt        int64  `json:"created_at"`
 			} `json:"entity"`
 		} `json:"payment"`
+		Subscription struct {
+			Entity struct {
+				ID         string `json:"id"`
+				PlanID     string `json:"plan_id"`
+				Status     string `json:"status"`
+				CustomerID string `json:"customer_id"`
+				CreatedAt  int64  `json:"created_at"`
+			} `json:"entity"`
+		} `json:"subscription"`
 	} `json:"payload"`
 	CreatedAt int64 `json:"created_at"`
 }
@@ -193,15 +204,39 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 				}
 			}
 
+			// Check for recurring subscription context
+			rzpSubID := paymentEntity.SubscriptionID
+			if rzpSubID == "" {
+				rzpSubID = payload.Payload.Subscription.Entity.ID
+			}
+
+			var subscriptionUUID *string
+			if rzpSubID != "" {
+				var subID string
+				err := tx.QueryRow(ctx, "SELECT id::text FROM subscriptions WHERE razorpay_subscription_id = $1 LIMIT 1", rzpSubID).Scan(&subID)
+				if err != nil {
+					_ = tx.QueryRow(ctx, `
+						INSERT INTO subscriptions (merchant_id, customer_id, amount, currency, status, razorpay_subscription_id)
+						VALUES ($1, $2, $3, $4, 'PAST_DUE', $5)
+						RETURNING id::text
+					`, merchantID, customerID, amountFloat, currency, rzpSubID).Scan(&subID)
+				} else {
+					_, _ = tx.Exec(ctx, "UPDATE subscriptions SET status = 'PAST_DUE', updated_at = CURRENT_TIMESTAMP WHERE id::text = $1", subID)
+				}
+				if subID != "" {
+					subscriptionUUID = &subID
+				}
+			}
+
 			// Insert payment record
 			var paymentUUID string
 			err = tx.QueryRow(ctx, `
 				INSERT INTO payments (
-					merchant_id, customer_id, amount, currency, status, method, failure_code, razorpay_payment_id
+					merchant_id, customer_id, subscription_id, amount, currency, status, method, failure_code, razorpay_payment_id
 				)
-				VALUES ($1, $2, $3, $4, 'FAILED', $5, $6, $7)
+				VALUES ($1, $2, $3, $4, $5, 'FAILED', $6, $7, $8)
 				RETURNING id::text
-			`, merchantID, customerID, amountFloat, currency, method, failureCode, razorpayPaymentID).Scan(&paymentUUID)
+			`, merchantID, customerID, subscriptionUUID, amountFloat, currency, method, failureCode, razorpayPaymentID).Scan(&paymentUUID)
 			if err != nil {
 				log.Printf("[Webhook] Failed to insert payment: %v", err)
 				http.Error(w, `{"error": "failed to insert payment"}`, http.StatusInternalServerError)
