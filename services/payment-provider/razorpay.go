@@ -178,6 +178,10 @@ func (r *RazorpayPaymentProvider) CreateRetryAttempt(ctx context.Context, paymen
 		"currency":     "INR",
 		"description":  fmt.Sprintf("Payment recovery for %s", paymentID),
 		"reference_id": fmt.Sprintf("rec_%s_%d", paymentID, time.Now().Unix()),
+		"notify": map[string]bool{
+			"sms":   true,
+			"email": true,
+		},
 	}
 
 	bodyBytes, _ := json.Marshal(payload)
@@ -239,6 +243,7 @@ func (r *RazorpayPaymentProvider) CreateRetryAttempt(ctx context.Context, paymen
 		ProviderPaymentID: linkResp.ID,
 		Status:            "SUCCESS",
 		Amount:            amount,
+		PaymentLinkURL:    linkResp.ShortURL,
 		CreatedAt:         time.Now().UTC(),
 	}, nil
 }

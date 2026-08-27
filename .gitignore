@@ -1,4 +1,6 @@
 .env
+.env.*
+*.local
 *.exe
 *.exe~
 node_modules/

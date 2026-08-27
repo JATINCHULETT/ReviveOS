@@ -240,6 +240,7 @@ func (p *LocalPaymentProvider) CreateRetryAttempt(ctx context.Context, paymentID
 		ProviderPaymentID: currentStatus.ProviderPaymentID,
 		Status:            attemptStatus,
 		Amount:            amount,
+		PaymentLinkURL:    fmt.Sprintf("https://checkout.reviveos.io/pay/%s", currentStatus.PaymentID),
 		ErrorMessage:      declineReason,
 		CreatedAt:         time.Now().UTC(),
 	}, nil

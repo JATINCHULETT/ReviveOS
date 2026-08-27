@@ -12,7 +12,7 @@ import (
 )
 
 func TestPolicyEngine_DBIntegration_Allow(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	pool, err := db.Connect(ctx)

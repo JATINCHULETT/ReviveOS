@@ -26,6 +26,7 @@ type RetryResult struct {
 	ProviderPaymentID string    `json:"provider_payment_id"`
 	Status            string    `json:"status"` // SUCCESS, FAILED, PENDING
 	Amount            float64   `json:"amount"`
+	PaymentLinkURL    string    `json:"payment_link_url,omitempty"`
 	ErrorMessage      string    `json:"error_message,omitempty"`
 	CreatedAt         time.Time `json:"created_at"`
 }
