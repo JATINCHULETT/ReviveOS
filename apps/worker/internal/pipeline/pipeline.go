@@ -53,28 +53,33 @@ func NewPipelineWithAI(pool *pgxpool.Pool, ai aiprovider.Provider) *Pipeline {
 	}
 }
 
-// FetchCustomerHistory queries real historical payment outcomes for a customer from PostgreSQL.
-func (p *Pipeline) FetchCustomerHistory(ctx context.Context, customerID, currentPaymentID string) (schemas.CustomerHistory, error) {
+// FetchCustomerHistory queries real historical payment outcomes for a customer from PostgreSQL by Email or ID.
+func (p *Pipeline) FetchCustomerHistory(ctx context.Context, customerID, customerEmail, currentPaymentID string) (schemas.CustomerHistory, error) {
 	var history schemas.CustomerHistory
 
-	if p.pool == nil || customerID == "" {
-		return history, fmt.Errorf("invalid pool or empty customerID")
+	if p.pool == nil {
+		return history, fmt.Errorf("invalid pool")
 	}
 
 	query := `
 		SELECT 
-			COALESCE(COUNT(CASE WHEN status IN ('CAPTURED', 'RECOVERED', 'SUCCESS') THEN 1 END), 0) as successful_payments,
-			COALESCE(COUNT(CASE WHEN status = 'FAILED' THEN 1 END), 0) as failed_payments
-		FROM payments
-		WHERE customer_id::text = $1 AND id::text != $2
+			COALESCE(COUNT(CASE WHEN p.status IN ('CAPTURED', 'RECOVERED', 'SUCCESS') THEN 1 END), 0) as successful_payments,
+			COALESCE(COUNT(CASE WHEN p.status = 'FAILED' THEN 1 END), 0) as failed_payments
+		FROM payments p
+		LEFT JOIN customers c ON p.customer_id = c.id
+		WHERE (
+			(c.email = $2 AND $2 != '') OR 
+			(p.customer_id::text = $1 AND $1 != '')
+		) 
+		AND p.id::text != $3
 	`
 
-	err := p.pool.QueryRow(ctx, query, customerID, currentPaymentID).Scan(
+	err := p.pool.QueryRow(ctx, query, customerID, customerEmail, currentPaymentID).Scan(
 		&history.SuccessfulPayments,
 		&history.FailedPayments,
 	)
 	if err != nil {
-		return history, fmt.Errorf("failed to query customer history for %s: %w", customerID, err)
+		return history, fmt.Errorf("failed to query customer history for %s (%s): %w", customerID, customerEmail, err)
 	}
 
 	return history, nil
@@ -86,11 +91,12 @@ func (p *Pipeline) AnalyzePayment(ctx context.Context, paymentIDOrExternal strin
 		return nil, fmt.Errorf("db pool is nil")
 	}
 
-	// 1. Query Payment from PostgreSQL
+	// 1. Query Payment from PostgreSQL with Customer Email
 	var (
 		paymentID         string
 		merchantID        string
 		customerID        string
+		customerEmail     string
 		amount            float64
 		currency          string
 		paymentStatus     string
@@ -102,18 +108,20 @@ func (p *Pipeline) AnalyzePayment(ctx context.Context, paymentIDOrExternal strin
 
 	paymentQuery := `
 		SELECT 
-			id::text,
-			merchant_id::text,
-			customer_id::text,
-			amount::float8,
-			currency,
-			status,
-			COALESCE(method, ''),
-			COALESCE(failure_code, ''),
-			COALESCE(razorpay_payment_id, ''),
-			created_at
-		FROM payments
-		WHERE id::text = $1 OR razorpay_payment_id = $1
+			p.id::text,
+			p.merchant_id::text,
+			p.customer_id::text,
+			COALESCE(c.email, ''),
+			p.amount::float8,
+			p.currency,
+			p.status,
+			COALESCE(p.method, ''),
+			COALESCE(p.failure_code, ''),
+			COALESCE(p.razorpay_payment_id, ''),
+			p.created_at
+		FROM payments p
+		LEFT JOIN customers c ON p.customer_id = c.id
+		WHERE p.id::text = $1 OR p.razorpay_payment_id = $1
 		LIMIT 1
 	`
 
@@ -121,6 +129,7 @@ func (p *Pipeline) AnalyzePayment(ctx context.Context, paymentIDOrExternal strin
 		&paymentID,
 		&merchantID,
 		&customerID,
+		&customerEmail,
 		&amount,
 		&currency,
 		&paymentStatus,
@@ -155,8 +164,8 @@ func (p *Pipeline) AnalyzePayment(ctx context.Context, paymentIDOrExternal strin
 		}
 	}
 
-	// 3. Query Real Customer History from PostgreSQL
-	history, err := p.FetchCustomerHistory(ctx, customerID, paymentID)
+	// 3. Query Real Customer History from PostgreSQL by Email or ID
+	history, err := p.FetchCustomerHistory(ctx, customerID, customerEmail, paymentID)
 	if err != nil {
 		log.Printf("[Pipeline] Warning: failed to fetch customer history: %v, defaulting to 0", err)
 	}
@@ -323,10 +332,13 @@ func (p *Pipeline) AnalyzePayment(ctx context.Context, paymentIDOrExternal strin
 		log.Printf("[Pipeline] ERROR persisting ai_decisions: %v", err)
 	}
 
-	// 13. Update Workflow with Selected Action & Probability
+	// 13. Update Workflow with Selected Action & Probability & advance status to SCHEDULED
 	_, err = p.pool.Exec(ctx, `
 		UPDATE recovery_workflows
-		SET recovery_probability = $1, selected_action = $2, updated_at = CURRENT_TIMESTAMP
+		SET recovery_probability = $1, 
+		    selected_action = $2, 
+		    status = CASE WHEN status = 'ANALYZING' THEN 'SCHEDULED' ELSE status END,
+		    updated_at = CURRENT_TIMESTAMP
 		WHERE id::text = $3
 	`, probability, string(aiRec.RecommendedAction), workflowID)
 	if err != nil {
