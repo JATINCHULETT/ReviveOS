@@ -17,6 +17,7 @@ import {
   LogOut,
   User,
 } from 'lucide-react';
+import ReviveLogo from '@/components/ui/ReviveLogo';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 export default function Sidebar() {
@@ -54,20 +55,8 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       {/* Brand */}
-      <div className="sidebar-header">
-        <div style={{
-          width: '30px', height: '30px', borderRadius: '8px',
-          background: 'var(--color-accent)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Zap size={16} color="#ffffff" />
-        </div>
-        <div>
-          <div style={{ fontSize: '15px', fontWeight: 700, letterSpacing: '-0.3px', color: 'var(--text-primary)' }}>
-            Revive<span style={{ color: 'var(--color-accent-light)' }}>OS</span>
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>AI Recovery Engine</div>
-        </div>
+      <div className="sidebar-header" style={{ padding: '16px 20px' }}>
+        <ReviveLogo size="md" href="/dashboard" />
       </div>
 
       {/* Navigation */}

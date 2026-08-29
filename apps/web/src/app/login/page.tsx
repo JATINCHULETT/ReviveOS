@@ -19,6 +19,7 @@ import {
 import { loginUser } from '@/lib/api';
 import GradientMesh from '@/components/3d/GradientMesh';
 import { BadgePulse } from '@/components/ui/AnimatedComponents';
+import ReviveLogo from '@/components/ui/ReviveLogo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -143,25 +144,11 @@ export default function LoginPage() {
       >
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div
-            style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: 'var(--radius-md)',
-              background: 'var(--color-accent)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 16px',
-            }}
-          >
-            <Zap size={22} color="#ffffff" />
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
+            <ReviveLogo size="lg" showTagline={true} href="/" />
           </div>
-          <h2 style={{ fontSize: '22px', fontWeight: 700, letterSpacing: '-0.3px', marginBottom: '6px' }}>
-            Welcome to Revive<span style={{ color: 'var(--color-accent-light)' }}>OS</span>
-          </h2>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-            Sign in to your recovery console
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '8px' }}>
+            Sign in to your autonomous AI recovery console
           </p>
         </div>
 

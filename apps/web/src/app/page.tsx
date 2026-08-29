@@ -32,6 +32,7 @@ import { ThemeToggle, FloatingThemeToggle } from '@/components/ui/ThemeToggle';
 import LightStreakHero from '@/components/ui/LightStreakHero';
 import TechnicalPipelineDiagram from '@/components/ui/TechnicalPipelineDiagram';
 import ParticleMorphingSection from '@/components/ui/ParticleMorphingSection';
+import ReviveLogo from '@/components/ui/ReviveLogo';
 
 export default function LandingPage() {
   // Simulator State
@@ -235,25 +236,7 @@ export default function LandingPage() {
         }}
       >
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '100%' }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div
-              style={{
-                width: '30px',
-                height: '30px',
-                borderRadius: '8px',
-                background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 0 14px rgba(236, 72, 153, 0.4)',
-              }}
-            >
-              <Zap size={16} color="#ffffff" />
-            </div>
-            <span style={{ fontSize: '17px', fontWeight: 800, letterSpacing: '-0.5px' }}>
-              Revive<span className="gradient-text-purple-pink">OS</span>
-            </span>
-          </Link>
+          <ReviveLogo size="md" href="/" />
 
           <nav style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
             {[
@@ -714,21 +697,8 @@ export default function LandingPage() {
             gap: '20px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div
-              style={{
-                width: '26px',
-                height: '26px',
-                borderRadius: '8px',
-                background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Zap size={13} color="#ffffff" />
-            </div>
-            <span style={{ fontWeight: 800, fontSize: '15px' }}>ReviveOS</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <ReviveLogo size="sm" href="/" />
             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
               © 2026 ReviveOS Platform. All rights reserved.
             </span>
