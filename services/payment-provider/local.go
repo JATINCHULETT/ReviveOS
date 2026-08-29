@@ -137,6 +137,11 @@ func (p *LocalPaymentProvider) initializeFromApplicationPayment(ctx context.Cont
 
 // CreateRetryAttempt executes a real provider operation to retry a failed payment.
 func (p *LocalPaymentProvider) CreateRetryAttempt(ctx context.Context, paymentID string, amount float64) (*RetryResult, error) {
+	return p.CreateRetryAttemptWithCustomer(ctx, paymentID, amount, "", "", "")
+}
+
+// CreateRetryAttemptWithCustomer executes a real provider operation to retry a failed payment with customer context.
+func (p *LocalPaymentProvider) CreateRetryAttemptWithCustomer(ctx context.Context, paymentID string, amount float64, customerEmail, customerPhone, customerName string) (*RetryResult, error) {
 	currentStatus, err := p.GetPayment(ctx, paymentID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve payment before retry: %w", err)

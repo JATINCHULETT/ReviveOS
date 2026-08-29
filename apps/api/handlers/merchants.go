@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -9,7 +10,9 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	notificationservice "github.com/reviveos/services/notification-service"
 	paymentprovider "github.com/reviveos/services/payment-provider"
+	"github.com/reviveos/utils/audit"
 	"github.com/reviveos/utils/outbox"
 )
 
@@ -514,7 +517,14 @@ func MerchantSandboxPaymentLinkHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		provider, _ := paymentprovider.NewPaymentProvider("", pool)
-		retryRes, _ := provider.CreateRetryAttempt(ctx, fmt.Sprintf("sb_%d", time.Now().UnixNano()), req.Amount)
+		retryRes, _ := provider.CreateRetryAttemptWithCustomer(
+			ctx,
+			fmt.Sprintf("sb_%d", time.Now().UnixNano()),
+			req.Amount,
+			req.CustomerEmail,
+			req.CustomerPhone,
+			"",
+		)
 
 		linkURL := fmt.Sprintf("https://checkout.reviveos.io/pay/sb_%d", time.Now().UnixNano())
 		if retryRes != nil && retryRes.PaymentLinkURL != "" {
@@ -534,7 +544,36 @@ func MerchantSandboxPaymentLinkHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 
+		var workflowID string
 		if req.TriggerFail {
+			// Immediately insert recovery_workflows row so it shows up in /workflows
+			_ = tx.QueryRow(ctx, `
+				INSERT INTO recovery_workflows (
+					payment_id, merchant_id, status, recovery_probability, selected_action, created_at, updated_at
+				)
+				VALUES ($1, $2, 'SCHEDULED', 0.78, 'PAYMENT_LINK', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+				RETURNING id::text
+			`, paymentID, req.MerchantID).Scan(&workflowID)
+
+			// Record action in recovery_actions
+			if workflowID != "" {
+				_, _ = tx.Exec(ctx, `
+					INSERT INTO recovery_actions (workflow_id, action_type, status, attempt, result, executed_at)
+					VALUES ($1, 'PAYMENT_LINK', 'EXECUTED', 1, $2, CURRENT_TIMESTAMP)
+				`, workflowID, linkURL)
+
+				_ = audit.AppendAuditLog(ctx, pool, audit.AuditEvent{
+					WorkflowID: workflowID,
+					Actor:      "sandbox:recovery",
+					Action:     "PAYMENT_LINK_DISPATCHED",
+					Metadata: map[string]interface{}{
+						"payment_id": paymentID,
+						"link_url":   linkURL,
+						"email":      req.CustomerEmail,
+					},
+				})
+			}
+
 			// Enqueue recovery analyze task into outbox
 			analyzePayload := map[string]interface{}{"payment_id": paymentID}
 			_, _ = outbox.InsertOutboxEvent(ctx, tx, "recovery:analyze", "payment", paymentID, analyzePayload)
@@ -545,11 +584,35 @@ func MerchantSandboxPaymentLinkHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 
+		// Dispatch live email via Resend API if email is provided
+		if req.TriggerFail && req.CustomerEmail != "" {
+			notifProv := notificationservice.NewNotificationProvider("")
+			if notifProv != nil {
+				go func() {
+					bgCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+					defer cancel()
+					_, _ = notifProv.SendRecoveryNotification(bgCtx, notificationservice.NotificationRequest{
+						PaymentID:     paymentID,
+						WorkflowID:    workflowID,
+						MerchantName:  "ReviveOS Merchant",
+						CustomerEmail: req.CustomerEmail,
+						CustomerPhone: req.CustomerPhone,
+						Amount:        req.Amount,
+						Currency:      "INR",
+						PaymentLink:   linkURL,
+						FailureReason: req.FailureCode,
+						ActionType:    "PAYMENT_LINK",
+					})
+				}()
+			}
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"payment_id":       paymentID,
 			"customer_id":      customerID,
+			"workflow_id":      workflowID,
 			"amount":           req.Amount,
 			"payment_link_url": linkURL,
 			"status":           paymentStatus,

@@ -35,5 +35,6 @@ type RetryResult struct {
 type PaymentProvider interface {
 	GetPayment(ctx context.Context, paymentID string) (*PaymentStatus, error)
 	CreateRetryAttempt(ctx context.Context, paymentID string, amount float64) (*RetryResult, error)
+	CreateRetryAttemptWithCustomer(ctx context.Context, paymentID string, amount float64, customerEmail, customerPhone, customerName string) (*RetryResult, error)
 	VerifyPayment(ctx context.Context, paymentID string) (*PaymentStatus, error)
 }

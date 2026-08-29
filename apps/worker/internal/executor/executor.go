@@ -314,8 +314,15 @@ func (e *RecoveryExecutor) ExecuteWorkflow(ctx context.Context, workflowID strin
 		},
 	})
 
-	// Call PaymentProvider.CreateRetryAttempt() for retry actions
-	retryResult, retryErr := e.provider.CreateRetryAttempt(ctx, paymentID, paymentAmount)
+	// Call PaymentProvider.CreateRetryAttemptWithCustomer() with full customer context
+	retryResult, retryErr := e.provider.CreateRetryAttemptWithCustomer(
+		ctx,
+		paymentID,
+		paymentAmount,
+		customerEmail.String,
+		customerPhone.String,
+		"",
+	)
 	if retryResult != nil {
 		res.ProviderAttemptID = retryResult.AttemptID
 	}

@@ -164,8 +164,13 @@ func (r *RazorpayPaymentProvider) VerifyPayment(ctx context.Context, paymentID s
 	return r.GetPayment(ctx, paymentID)
 }
 
-// CreateRetryAttempt creates a payment link / retry attempt via Razorpay API.
+// CreateRetryAttempt creates a payment link / retry attempt via Razorpay API without explicit customer metadata.
 func (r *RazorpayPaymentProvider) CreateRetryAttempt(ctx context.Context, paymentID string, amount float64) (*RetryResult, error) {
+	return r.CreateRetryAttemptWithCustomer(ctx, paymentID, amount, "", "", "")
+}
+
+// CreateRetryAttemptWithCustomer creates a payment link populated with customer email, phone, and name for Razorpay notifications.
+func (r *RazorpayPaymentProvider) CreateRetryAttemptWithCustomer(ctx context.Context, paymentID string, amount float64, customerEmail, customerPhone, customerName string) (*RetryResult, error) {
 	if err := r.ValidateCredentials(); err != nil {
 		return nil, fmt.Errorf("razorpay credentials error: %w", err)
 	}
@@ -182,6 +187,22 @@ func (r *RazorpayPaymentProvider) CreateRetryAttempt(ctx context.Context, paymen
 			"sms":   true,
 			"email": true,
 		},
+	}
+
+	if customerEmail != "" || customerPhone != "" || customerName != "" {
+		custMap := map[string]string{}
+		if customerEmail != "" {
+			custMap["email"] = customerEmail
+		}
+		if customerPhone != "" {
+			custMap["contact"] = customerPhone
+		}
+		if customerName != "" {
+			custMap["name"] = customerName
+		} else if customerEmail != "" {
+			custMap["name"] = strings.Split(customerEmail, "@")[0]
+		}
+		payload["customer"] = custMap
 	}
 
 	bodyBytes, _ := json.Marshal(payload)
