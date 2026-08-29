@@ -16,6 +16,7 @@ import {
   Globe,
   LogOut,
   User,
+  Users,
 } from 'lucide-react';
 import ReviveLogo from '@/components/ui/ReviveLogo';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -37,11 +38,9 @@ export default function Sidebar() {
   }, [pathname]);
 
   const navItems = [
-    { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-    { label: 'Merchant Portal', href: '/merchant', icon: Building2 },
-    { label: 'Admin Hub', href: '/admin', icon: Shield },
-    { label: 'Workflows', href: '/workflows', icon: GitBranch },
     { label: 'Analytics', href: '/analytics', icon: BarChart3 },
+    { label: 'Workflows', href: '/workflows', icon: GitBranch },
+    { label: 'Customers & Retries', href: '/merchant', icon: Users },
     { label: 'System Health', href: '/system', icon: Server },
   ];
 
@@ -56,17 +55,17 @@ export default function Sidebar() {
     <aside className="sidebar">
       {/* Brand */}
       <div className="sidebar-header" style={{ padding: '16px 20px' }}>
-        <ReviveLogo size="md" href="/dashboard" />
+        <ReviveLogo size="md" href="/analytics" />
       </div>
 
       {/* Navigation */}
       <nav className="sidebar-nav">
         <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em', color: 'var(--text-muted)', padding: '0 12px 8px', marginTop: '4px' }}>
-          MANAGEMENT
+          MAIN CONSOLE
         </div>
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+          const isActive = pathname === item.href || (item.href !== '/analytics' && pathname.startsWith(item.href));
           return (
             <Link key={item.href} href={item.href} className={`nav-item ${isActive ? 'active' : ''}`}>
               <Icon size={17} />
@@ -74,14 +73,6 @@ export default function Sidebar() {
             </Link>
           );
         })}
-
-        <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em', color: 'var(--text-muted)', padding: '16px 12px 8px' }}>
-          LINKS
-        </div>
-        <Link href="/" className="nav-item">
-          <Globe size={17} />
-          <span>Marketing Page</span>
-        </Link>
       </nav>
 
       {/* Theme Switcher in Sidebar */}

@@ -33,6 +33,7 @@ import LightStreakHero from '@/components/ui/LightStreakHero';
 import TechnicalPipelineDiagram from '@/components/ui/TechnicalPipelineDiagram';
 import ParticleMorphingSection from '@/components/ui/ParticleMorphingSection';
 import ReviveLogo from '@/components/ui/ReviveLogo';
+import { createSandboxPaymentLink, getMerchants } from '@/lib/api';
 
 export default function LandingPage() {
   // Simulator State
@@ -44,9 +45,25 @@ export default function LandingPage() {
   // ROI Calculator State
   const [monthlyGMV, setMonthlyGMV] = useState(2500000); // 25 Lakhs default
 
-  const runSimulation = () => {
+  const runSimulation = async () => {
     setIsSimulating(true);
     setSimStage(1);
+
+    // Synchronously create a real simulated payment failure in PostgreSQL so it syncs to /workflows
+    try {
+      const merchants = await getMerchants().catch(() => []);
+      const merchantId = merchants[0]?.id || '11111111-1111-1111-1111-111111111111';
+      await createSandboxPaymentLink({
+        merchant_id: merchantId,
+        customer_email: `customer_${Date.now()}@example.com`,
+        amount: simAmount,
+        trigger_failure_immediately: true,
+        failure_code: selectedError,
+        description: `Simulated ${selectedError} Recovery`,
+      });
+    } catch (err) {
+      console.warn('Simulation sync notice:', err);
+    }
 
     setTimeout(() => setSimStage(2), 700);
     setTimeout(() => setSimStage(3), 1500);
