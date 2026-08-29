@@ -54,80 +54,98 @@ export interface WorkflowDetail {
     id: string;
     payment_id: string;
     status: string;
-    current_state: string;
+    current_state?: string;
     recovery_probability: number;
     selected_action: string;
-    attempt_count: number;
+    attempt_count?: number;
+    attempts_count?: number;
     created_at: string;
     updated_at: string;
+    amount?: number;
+    currency?: string;
+    payment_status?: string;
+    payment_method?: string;
+    failure_code?: string;
+    failure_reason?: string;
+    merchant_id?: string;
+    razorpay_payment_id?: string;
+    customer_id?: string;
+    customer_email?: string;
+    customer_phone?: string;
+    communication_opt_out?: boolean;
+    scheduled_at?: string;
   };
-  payment: {
+  payment?: {
     id: string;
-    merchant_id: string;
-    customer_id: string;
+    merchant_id?: string;
+    customer_id?: string;
     amount: number;
     currency: string;
     status: string;
-    payment_method: string;
-    failure_code: string;
-    failure_reason: string;
+    payment_method?: string;
+    failure_code?: string;
+    failure_reason?: string;
     razorpay_payment_id?: string;
-    created_at: string;
+    created_at?: string;
   };
   customer?: {
     id: string;
     email: string;
     phone?: string;
-    communication_opt_out: boolean;
+    communication_opt_out?: boolean;
   };
   policy_decision?: {
-    decision: 'ALLOW' | 'BLOCK' | 'ESCALATE' | 'MODIFY';
+    decision: 'ALLOW' | 'BLOCK' | 'ESCALATE' | 'MODIFY' | string;
     reason: string;
-    evaluated_at: string;
+    evaluated_at?: string;
     thresholds?: {
-      max_retries: number;
-      confidence_threshold: number;
-      amount_threshold: number;
+      max_retries?: number;
+      confidence_threshold?: number;
+      amount_threshold?: number;
     };
   };
-  ai_decisions: Array<{
+  ai_decisions?: Array<{
     id: string;
-    provider: string;
-    model: string;
-    recommended_action: string;
-    confidence: number;
+    provider?: string;
+    model?: string;
+    recommended_action?: string;
+    confidence?: number;
     reasoning?: string;
-    latency_ms: number;
-    created_at: string;
+    latency_ms?: number;
+    created_at?: string;
     raw_response?: string;
   }>;
-  model_predictions: Array<{
+  model_predictions?: Array<{
     id: string;
-    model_version: string;
-    probability: number;
-    features: Record<string, any>;
-    created_at: string;
+    model_version?: string;
+    probability?: number;
+    features?: Record<string, any>;
+    features_used?: Record<string, any>;
+    created_at?: string;
   }>;
-  recovery_actions: Array<{
+  recovery_actions?: Array<{
     id: string;
     action_type: string;
     status: string;
-    attempt: number;
+    attempt?: number;
     result?: string;
-    created_at: string;
+    created_at?: string;
     executed_at?: string;
   }>;
-  recovery_outcomes: Array<{
+  recovery_outcomes?: Array<{
     id: string;
     action_id?: string;
     payment_id: string;
     recovered: boolean;
-    recovered_amount: number;
+    recovered_amount?: number;
+    time_to_recovery?: string;
     time_to_recovery_seconds?: number;
-    created_at: string;
+    created_at?: string;
   }>;
-  audit_events: Array<{
-    id: string;
+  audit_events?: Array<{
+    id?: string;
+    event_id?: string;
+    workflow_id?: string;
     actor: string;
     action: string;
     payload_hash: string;
