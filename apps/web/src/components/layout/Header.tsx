@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getSystemHealth } from '@/lib/api';
 import { Activity, RefreshCw } from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 export default function Header({ title }: { title?: string }) {
   const [status, setStatus] = useState<string>('CHECKING');
@@ -26,30 +27,30 @@ export default function Header({ title }: { title?: string }) {
     return () => clearInterval(timer);
   }, []);
 
+  const statusColor = status === 'HEALTHY' ? 'var(--color-emerald)' : status === 'DEGRADED' ? 'var(--color-amber)' : 'var(--color-red)';
+
   return (
     <header className="top-header">
       <div className="page-title">{title || 'ReviveOS Operations'}</div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Activity size={16} color={status === 'HEALTHY' ? '#10b981' : status === 'DEGRADED' ? '#f59e0b' : '#ef4444'} />
-          <span style={{ 
-            fontSize: '12px', 
-            fontWeight: 600, 
-            color: status === 'HEALTHY' ? '#10b981' : status === 'DEGRADED' ? '#f59e0b' : '#ef4444' 
-          }}>
-            SYSTEM {status}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <ThemeToggle />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Activity size={14} color={statusColor} />
+          <span style={{ fontSize: '12px', fontWeight: 600, color: statusColor }}>
+            {status}
           </span>
         </div>
 
-        <button 
+        <button
           onClick={checkHealth}
-          className="btn-secondary" 
-          style={{ padding: '6px 10px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
+          className="btn-ghost"
+          style={{ padding: '5px 12px', fontSize: '12px', gap: '5px' }}
           title="Refresh system status"
         >
           <RefreshCw size={12} className={loading ? 'spinning' : ''} />
-          <span>Sync</span>
+          Sync
         </button>
       </div>
     </header>

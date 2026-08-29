@@ -2,222 +2,316 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield, Building2, User, Key, ArrowRight, Lock } from 'lucide-react';
+import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Zap,
+  Lock,
+  Mail,
+  ArrowRight,
+  ShieldCheck,
+  Building,
+  Key,
+  CheckCircle2,
+  AlertCircle,
+  Sparkles,
+} from 'lucide-react';
 import { loginUser } from '@/lib/api';
+import GradientMesh from '@/components/3d/GradientMesh';
+import { BadgePulse } from '@/components/ui/AnimatedComponents';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [roleTab, setRoleTab] = useState<'MERCHANT' | 'ADMIN' | 'DEMO'>('MERCHANT');
+  const [email, setEmail] = useState('merchant@acme.com');
+  const [password, setPassword] = useState('merchant');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const handleRoleSelect = (role: 'MERCHANT' | 'ADMIN' | 'DEMO') => {
+    setRoleTab(role);
+    setError(null);
+    if (role === 'MERCHANT') {
+      setEmail('merchant@acme.com');
+      setPassword('merchant');
+    } else if (role === 'ADMIN') {
+      setEmail('admin@reviveos.io');
+      setPassword('admin');
+    } else {
+      setEmail('demo@reviveos.io');
+      setPassword('demo123');
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
+    if (roleTab === 'DEMO') {
+      localStorage.setItem('revive_token', 'demo_token');
+      localStorage.setItem('revive_user', JSON.stringify({ email: 'demo@reviveos.io', role: 'MERCHANT', name: 'Demo Merchant' }));
+      setSuccess(true);
+      setTimeout(() => router.push('/merchant'), 600);
+      return;
+    }
+
     try {
-      const res = await loginUser(email, password);
+      const res = await loginUser({ email, password });
       localStorage.setItem('revive_token', res.token);
       localStorage.setItem('revive_user', JSON.stringify(res.user));
 
-      if (res.user.role === 'ADMIN') {
-        router.push('/admin');
-      } else {
-        router.push('/merchant');
-      }
+      setSuccess(true);
+      setTimeout(() => {
+        if (res.user.role === 'ADMIN') {
+          router.push('/admin');
+        } else {
+          router.push('/merchant');
+        }
+      }, 500);
     } catch (err: any) {
-      setError(err.message || 'Login failed');
+      setError(err?.message || 'Invalid email or password. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleQuickLogin = (role: 'ADMIN' | 'MERCHANT') => {
-    if (role === 'ADMIN') {
-      setEmail('admin@reviveos.io');
-      setPassword('admin');
-    } else {
-      setEmail('merchant@acme.com');
-      setPassword('merchant');
-    }
-  };
+  const roles = [
+    { id: 'MERCHANT' as const, label: 'Merchant', icon: <Building size={14} /> },
+    { id: 'ADMIN' as const, label: 'Admin', icon: <ShieldCheck size={14} /> },
+    { id: 'DEMO' as const, label: 'Demo', icon: <Sparkles size={14} /> },
+  ];
 
   return (
-    <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-      <div style={{
-        maxWidth: '460px',
-        width: '100%',
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border-subtle)',
-        borderRadius: '16px',
-        padding: '36px',
-        boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
-      }}>
+    <div
+      style={{
+        position: 'relative',
+        minHeight: '100vh',
+        backgroundColor: 'var(--bg-primary)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
+        overflow: 'hidden',
+      }}
+    >
+      <GradientMesh />
+
+      {/* Back Link */}
+      <Link
+        href="/"
+        style={{
+          position: 'absolute',
+          top: '20px',
+          left: '20px',
+          zIndex: 30,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '8px 14px',
+          borderRadius: 'var(--radius-full)',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-subtle)',
+          color: 'var(--text-muted)',
+          fontSize: '13px',
+          fontWeight: 500,
+          transition: 'all 0.2s ease',
+        }}
+      >
+        <Zap size={14} color="var(--color-accent-light)" />
+        ReviveOS
+      </Link>
+
+      {/* Login Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.25, 0.4, 0.25, 1] }}
+        style={{
+          position: 'relative',
+          zIndex: 20,
+          width: '100%',
+          maxWidth: '420px',
+          background: 'rgba(9, 9, 11, 0.85)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-xl)',
+          padding: '36px',
+        }}
+      >
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, #2563EB, #1D4ED8)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: '14px'
-          }}>
-            <Lock size={24} color="#FFF" />
+          <div
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--color-accent)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px',
+            }}
+          >
+            <Zap size={22} color="#ffffff" />
           </div>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-            Sign In to ReviveOS
-          </h1>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '6px' }}>
-            Choose your role or enter credentials to access your portal
+          <h2 style={{ fontSize: '22px', fontWeight: 700, letterSpacing: '-0.3px', marginBottom: '6px' }}>
+            Welcome to Revive<span style={{ color: 'var(--color-accent-light)' }}>OS</span>
+          </h2>
+          <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+            Sign in to your recovery console
           </p>
         </div>
 
-        {/* Quick Role Selectors */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '24px' }}>
-          <button
-            type="button"
-            onClick={() => handleQuickLogin('ADMIN')}
-            style={{
-              padding: '12px',
-              borderRadius: '8px',
-              border: email === 'admin@reviveos.io' ? '1px solid #3B82F6' : '1px solid var(--border-subtle)',
-              background: email === 'admin@reviveos.io' ? 'rgba(59, 130, 246, 0.15)' : 'var(--bg-input)',
-              color: 'var(--text-primary)',
-              cursor: 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '12px',
-              fontWeight: 600,
-              transition: 'all 0.2s'
-            }}
-          >
-            <Shield size={18} color="#3B82F6" />
-            <span>Admin Portal</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleQuickLogin('MERCHANT')}
-            style={{
-              padding: '12px',
-              borderRadius: '8px',
-              border: email === 'merchant@acme.com' ? '1px solid #10B981' : '1px solid var(--border-subtle)',
-              background: email === 'merchant@acme.com' ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-input)',
-              color: 'var(--text-primary)',
-              cursor: 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '12px',
-              fontWeight: 600,
-              transition: 'all 0.2s'
-            }}
-          >
-            <Building2 size={18} color="#10B981" />
-            <span>Merchant Portal</span>
-          </button>
+        {/* Role Tabs */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '4px',
+            padding: '4px',
+            borderRadius: 'var(--radius-md)',
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid var(--border-subtle)',
+            marginBottom: '24px',
+          }}
+        >
+          {roles.map((tab) => {
+            const isSelected = roleTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleRoleSelect(tab.id)}
+                style={{
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  padding: '9px 8px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: isSelected ? 600 : 500,
+                  fontFamily: 'var(--font-sans)',
+                  cursor: 'pointer',
+                  background: isSelected ? 'var(--color-accent-bg)' : 'transparent',
+                  color: isSelected ? 'var(--color-accent-light)' : 'var(--text-muted)',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
-        {error && (
-          <div style={{
-            background: 'rgba(239, 68, 68, 0.15)',
-            border: '1px solid #EF4444',
-            color: '#FCA5A5',
-            padding: '10px 14px',
-            borderRadius: '8px',
-            fontSize: '13px',
-            marginBottom: '16px'
-          }}>
-            {error}
+        {/* Error Alert */}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              style={{
+                marginBottom: '16px',
+                padding: '12px',
+                borderRadius: 'var(--radius-sm)',
+                background: 'var(--color-red-bg)',
+                border: '1px solid var(--color-red-border)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '13px',
+                color: '#ef4444',
+              }}
+            >
+              <AlertCircle size={15} />
+              <span>{error}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Success Alert */}
+        {success && (
+          <div
+            style={{
+              marginBottom: '16px',
+              padding: '12px',
+              borderRadius: 'var(--radius-sm)',
+              background: 'var(--color-emerald-bg)',
+              border: '1px solid var(--color-emerald-border)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '13px',
+              color: '#10b981',
+            }}
+          >
+            <CheckCircle2 size={15} />
+            <span>Authenticated — launching console...</span>
           </div>
         )}
 
-        <form onSubmit={handleLogin}>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-              Email Address
+        {/* Login Form */}
+        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div>
+            <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
+              Email
             </label>
             <div style={{ position: 'relative' }}>
-              <User size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '12px' }} />
+              <Mail size={15} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '13px' }} />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
-                style={{
-                  width: '100%',
-                  padding: '10px 12px 10px 36px',
-                  borderRadius: '8px',
-                  background: 'var(--bg-input)',
-                  border: '1px solid var(--border-subtle)',
-                  color: 'var(--text-primary)',
-                  fontSize: '14px',
-                  outline: 'none'
-                }}
+                className="input"
+                style={{ paddingLeft: '38px' }}
               />
             </div>
           </div>
 
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+          <div>
+            <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
               Password
             </label>
             <div style={{ position: 'relative' }}>
-              <Key size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '12px' }} />
+              <Lock size={15} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '13px' }} />
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                style={{
-                  width: '100%',
-                  padding: '10px 12px 10px 36px',
-                  borderRadius: '8px',
-                  background: 'var(--bg-input)',
-                  border: '1px solid var(--border-subtle)',
-                  color: 'var(--text-primary)',
-                  fontSize: '14px',
-                  outline: 'none'
-                }}
+                className="input"
+                style={{ paddingLeft: '38px' }}
               />
             </div>
           </div>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
             type="submit"
             disabled={loading}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '8px',
-              background: 'linear-gradient(135deg, #2563EB, #1D4ED8)',
-              color: '#FFF',
-              border: 'none',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              boxShadow: '0 4px 14px rgba(37,99,235,0.3)'
-            }}
+            className="btn-primary"
+            style={{ width: '100%', marginTop: '6px', padding: '12px', fontSize: '14px' }}
           >
-            <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
-            <ArrowRight size={16} />
-          </button>
+            {loading ? 'Authenticating...' : roleTab === 'DEMO' ? 'Enter Sandbox' : 'Sign In'}
+            <ArrowRight size={15} />
+          </motion.button>
         </form>
-      </div>
+
+        {/* Security Footer */}
+        <div style={{ marginTop: '22px', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)' }}>
+          <Key size={11} color="var(--color-emerald)" />
+          <span>HMAC-SHA256 Scoped Session • PCI-DSS Encrypted</span>
+        </div>
+      </motion.div>
     </div>
   );
 }

@@ -1,64 +1,166 @@
 'use client';
 
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  GitBranch, 
-  BarChart3, 
-  Server, 
+import { usePathname, useRouter } from 'next/navigation';
+import {
+  LayoutDashboard,
+  GitBranch,
+  BarChart3,
+  Server,
   ShieldCheck,
   Building2,
   Shield,
-  LogIn
+  LogIn,
+  Zap,
+  Globe,
+  LogOut,
+  User,
 } from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('revive_user');
+      if (stored) {
+        setCurrentUser(JSON.parse(stored));
+      }
+    } catch {
+      // ignore
+    }
+  }, [pathname]);
 
   const navItems = [
-    { label: 'Overview', href: '/', icon: LayoutDashboard },
+    { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
     { label: 'Merchant Portal', href: '/merchant', icon: Building2 },
     { label: 'Admin Hub', href: '/admin', icon: Shield },
     { label: 'Workflows', href: '/workflows', icon: GitBranch },
     { label: 'Analytics', href: '/analytics', icon: BarChart3 },
     { label: 'System Health', href: '/system', icon: Server },
-    { label: 'Sign In / Roles', href: '/login', icon: LogIn },
   ];
+
+  const handleLogout = () => {
+    localStorage.removeItem('revive_token');
+    localStorage.removeItem('revive_user');
+    setCurrentUser(null);
+    router.push('/login');
+  };
 
   return (
     <aside className="sidebar">
+      {/* Brand */}
       <div className="sidebar-header">
-        <div className="logo-badge">REVIVE</div>
+        <div style={{
+          width: '30px', height: '30px', borderRadius: '8px',
+          background: 'var(--color-accent)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Zap size={16} color="#ffffff" />
+        </div>
         <div>
-          <div className="logo-text">ReviveOS</div>
-          <div className="logo-sub">Recovery Engine</div>
+          <div style={{ fontSize: '15px', fontWeight: 700, letterSpacing: '-0.3px', color: 'var(--text-primary)' }}>
+            Revive<span style={{ color: 'var(--color-accent-light)' }}>OS</span>
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>AI Recovery Engine</div>
         </div>
       </div>
 
+      {/* Navigation */}
       <nav className="sidebar-nav">
+        <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em', color: 'var(--text-muted)', padding: '0 12px 8px', marginTop: '4px' }}>
+          MANAGEMENT
+        </div>
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+          const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`nav-link ${isActive ? 'active' : ''}`}
-            >
-              <Icon size={18} />
+            <Link key={item.href} href={item.href} className={`nav-item ${isActive ? 'active' : ''}`}>
+              <Icon size={17} />
               <span>{item.label}</span>
             </Link>
           );
         })}
+
+        <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em', color: 'var(--text-muted)', padding: '16px 12px 8px' }}>
+          LINKS
+        </div>
+        <Link href="/" className="nav-item">
+          <Globe size={17} />
+          <span>Marketing Page</span>
+        </Link>
       </nav>
 
-      <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border-subtle)', fontSize: '11px', color: 'var(--text-muted)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-          <ShieldCheck size={14} color="#10b981" />
-          <span style={{ color: '#10b981', fontWeight: 600 }}>Ledger Validated</span>
-        </div>
-        <div>Hash-chained audit log active</div>
+      {/* Theme Switcher in Sidebar */}
+      <div style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-subtle)' }}>
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>THEME</span>
+        <ThemeToggle />
+      </div>
+
+      {/* User Session */}
+      <div style={{ padding: '14px 12px', borderTop: '1px solid var(--border-subtle)' }}>
+        {currentUser ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+              <div style={{
+                width: '28px', height: '28px', borderRadius: 'var(--radius-full)',
+                background: 'var(--color-accent-bg)',
+                border: '1px solid var(--color-accent-border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                <User size={13} color="var(--color-accent-light)" />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {currentUser.email}
+                </div>
+                <div style={{ fontSize: '10px', color: 'var(--color-accent-light)', fontWeight: 500 }}>
+                  {currentUser.role}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              title="Sign Out"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                padding: '6px',
+                borderRadius: 'var(--radius-sm)',
+                transition: 'color 0.15s ease',
+                display: 'flex',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-red)')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+            >
+              <LogOut size={15} />
+            </button>
+          </div>
+        ) : (
+          <Link
+            href="/login"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: '8px', padding: '8px',
+              borderRadius: 'var(--radius-sm)',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-subtle)',
+              fontSize: '12px', fontWeight: 500,
+              color: 'var(--color-accent-light)',
+              transition: 'background 0.15s ease',
+            }}
+          >
+            <LogIn size={13} />
+            <span>Sign In / Switch Role</span>
+          </Link>
+        )}
       </div>
     </aside>
   );

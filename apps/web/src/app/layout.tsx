@@ -1,10 +1,9 @@
 import './globals.css';
-import Sidebar from '@/components/layout/Sidebar';
-import Header from '@/components/layout/Header';
+import AppLayout from '@/components/layout/AppLayout';
 
 export const metadata = {
-  title: 'ReviveOS — Payment Recovery Orchestration',
-  description: 'Intelligent payment recovery control and verification platform',
+  title: 'ReviveOS — Autonomous AI Payment Recovery & Recurring Autopay Engine',
+  description: 'Diagnose, orchestrate, and recover failed recurring payments and checkout declines with DeepSeek-R1 intelligence and zero-touch retry orchestration.',
 };
 
 export default function RootLayout({
@@ -13,15 +12,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>
-        <div className="dashboard-layout">
-          <Sidebar />
-          <div className="main-content">
-            <Header />
-            <main>{children}</main>
-          </div>
-        </div>
+    <html lang="en" suppressHydrationWarning className="dark">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      </head>
+      <body suppressHydrationWarning>
+        <AppLayout>{children}</AppLayout>
       </body>
     </html>
   );
