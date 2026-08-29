@@ -61,6 +61,16 @@ func (h *TaskHandler) HandleAnalyze(ctx context.Context, t *asynq.Task) error {
 	}
 
 	log.Printf("[Worker] Analysis finished: Workflow=%s, Category=%s, Prob=%.4f", res.WorkflowID, res.FailureCategory, res.Probability)
+
+	// Automatically execute recovery workflow (autopay retry or Resend payment link email)
+	execRes, err := h.executor.ExecuteWorkflow(ctx, res.WorkflowID)
+	if err != nil {
+		log.Printf("[Worker] Warning in ExecuteWorkflow for %s: %v", res.WorkflowID, err)
+		return nil
+	}
+
+	log.Printf("[Worker] Execution complete: Workflow=%s, Action=%s, Rec=%s, Recovered=%v, NotificationSent=%v",
+		res.WorkflowID, execRes.ActionTaken, execRes.Reconciliation, execRes.Recovered, execRes.NotificationSent)
 	return nil
 }
 
@@ -69,10 +79,13 @@ func (h *TaskHandler) HandlePaymentFailed(ctx context.Context, t *asynq.Task) er
 
 	var event schemas.PaymentFailureEvent
 	if err := json.Unmarshal(t.Payload(), &event); err == nil && event.PaymentID != "" {
-		_, err := h.pipeline.AnalyzePayment(ctx, event.PaymentID)
+		res, err := h.pipeline.AnalyzePayment(ctx, event.PaymentID)
 		if err != nil {
 			log.Printf("[Worker] ERROR analyzing payment %s: %v", event.PaymentID, err)
 			return err
+		}
+		if res != nil && res.WorkflowID != "" {
+			_, _ = h.executor.ExecuteWorkflow(ctx, res.WorkflowID)
 		}
 		return nil
 	}
@@ -80,8 +93,14 @@ func (h *TaskHandler) HandlePaymentFailed(ctx context.Context, t *asynq.Task) er
 	var raw map[string]interface{}
 	if err := json.Unmarshal(t.Payload(), &raw); err == nil {
 		if pid, ok := raw["payment_id"].(string); ok && pid != "" {
-			_, err := h.pipeline.AnalyzePayment(ctx, pid)
-			return err
+			res, err := h.pipeline.AnalyzePayment(ctx, pid)
+			if err != nil {
+				return err
+			}
+			if res != nil && res.WorkflowID != "" {
+				_, _ = h.executor.ExecuteWorkflow(ctx, res.WorkflowID)
+			}
+			return nil
 		}
 	}
 

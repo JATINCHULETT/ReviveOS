@@ -427,14 +427,12 @@ export default function WorkflowDetailPage() {
                   ))}
                 </div>
               ) : (
-                <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', padding: '12px 16px', borderRadius: '10px', fontSize: '11.5px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span className="mono" style={{ fontWeight: 700, color: 'var(--color-accent)' }}>WORKFLOW_CREATED</span>
-                    <span style={{ color: 'var(--text-muted)' }}>system_worker | {formatDate(wf.created_at)}</span>
+                <div style={{ background: 'var(--bg-elevated)', border: '1px dashed var(--border-subtle)', padding: '16px 20px', borderRadius: '10px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                    Audit Ledger Awaiting Execution Blocks
                   </div>
-                  <div className="mono" style={{ color: 'var(--text-secondary)', fontSize: '11px', wordBreak: 'break-all' }}>
-                    <div>Payload Hash: 8f4c2e6b1a9d0f3c5e7a2b4d6f8a0c2e4b6d8f0a2c4e6b8a0c2e4b6d8f0a2c4e</div>
-                    <div>Block Hash:   <span style={{ color: '#10b981' }}>9a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b</span></div>
+                  <div>
+                    SHA-256 block events are appended in real-time as automated retries, policy evaluations, and Resend notification links are dispatched.
                   </div>
                 </div>
               )}
