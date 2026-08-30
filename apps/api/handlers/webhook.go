@@ -181,33 +181,65 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			var customerID string
 			custEmail := strings.TrimSpace(paymentEntity.Email)
 			custPhone := strings.TrimSpace(paymentEntity.Contact)
+			description := strings.TrimSpace(paymentEntity.Description)
 
-			var lookupErr error
-			if custEmail != "" {
-				lookupErr = tx.QueryRow(ctx, `
-					SELECT id::text FROM customers WHERE merchant_id = $1 AND email = $2 LIMIT 1
-				`, merchantID, custEmail).Scan(&customerID)
-			} else if custPhone != "" {
-				lookupErr = tx.QueryRow(ctx, `
-					SELECT id::text FROM customers WHERE merchant_id = $1 AND phone = $2 LIMIT 1
-				`, merchantID, custPhone).Scan(&customerID)
-			} else {
-				lookupErr = fmt.Errorf("no email or phone provided")
+			// 1. If Razorpay returns a placeholder email like void@razorpay.com or empty email,
+			// check if this payment was an attempt on a recovery link with description "Payment recovery for <original_payment_id>"
+			if strings.EqualFold(custEmail, "void@razorpay.com") || custEmail == "" || strings.HasPrefix(strings.ToLower(custEmail), "void@") {
+				custEmail = ""
+				if strings.HasPrefix(description, "Payment recovery for ") {
+					origPaymentRef := strings.TrimPrefix(description, "Payment recovery for ")
+					origPaymentRef = strings.TrimSpace(origPaymentRef)
+					if origPaymentRef != "" {
+						var origCustID, origEmail, origPhone string
+						lookupOrigErr := tx.QueryRow(ctx, `
+							SELECT p.customer_id::text, COALESCE(c.email, ''), COALESCE(c.phone, '')
+							FROM payments p
+							JOIN customers c ON p.customer_id = c.id
+							WHERE p.id::text = $1 OR p.razorpay_payment_id = $1
+							LIMIT 1
+						`, origPaymentRef).Scan(&origCustID, &origEmail, &origPhone)
+						if lookupOrigErr == nil && origCustID != "" {
+							customerID = origCustID
+							custEmail = origEmail
+							if custPhone == "" {
+								custPhone = origPhone
+							}
+							log.Printf("[Webhook] Resolved customer %s (%s) from recovery description: %s", customerID, custEmail, description)
+						}
+					}
+				}
 			}
 
-			if lookupErr != nil || customerID == "" {
-				if custEmail == "" {
-					custEmail = fmt.Sprintf("cust_%s@revive-os.me", razorpayPaymentID)
+			// 2. If not already resolved from recovery reference, query by email or phone
+			if customerID == "" {
+				var lookupErr error
+				if custEmail != "" {
+					lookupErr = tx.QueryRow(ctx, `
+						SELECT id::text FROM customers WHERE merchant_id = $1 AND email = $2 LIMIT 1
+					`, merchantID, custEmail).Scan(&customerID)
+				} else if custPhone != "" {
+					lookupErr = tx.QueryRow(ctx, `
+						SELECT id::text FROM customers WHERE merchant_id = $1 AND phone = $2 LIMIT 1
+					`, merchantID, custPhone).Scan(&customerID)
+				} else {
+					lookupErr = fmt.Errorf("no email or phone provided")
 				}
-				err = tx.QueryRow(ctx, `
-					INSERT INTO customers (merchant_id, email, phone)
-					VALUES ($1, $2, $3)
-					RETURNING id::text
-				`, merchantID, custEmail, custPhone).Scan(&customerID)
-				if err != nil {
-					log.Printf("[Webhook] Failed to insert customer: %v", err)
-					http.Error(w, `{"error": "failed to insert customer"}`, http.StatusInternalServerError)
-					return
+
+				if lookupErr != nil || customerID == "" {
+					if custEmail == "" {
+						custEmail = fmt.Sprintf("cust_%s@revive-os.me", razorpayPaymentID)
+					}
+					err = tx.QueryRow(ctx, `
+						INSERT INTO customers (merchant_id, email, phone)
+						VALUES ($1, $2, $3)
+						RETURNING id::text
+					`, merchantID, custEmail, custPhone).Scan(&customerID)
+					if err != nil {
+						log.Printf("[Webhook] Failed to insert customer: %v", err)
+						http.Error(w, `{"error": "failed to insert customer"}`, http.StatusInternalServerError)
+						return
+					}
 				}
 			}
 
