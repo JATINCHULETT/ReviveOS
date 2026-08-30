@@ -55,7 +55,7 @@ export default function LandingPage() {
       const merchantId = merchants[0]?.id || '11111111-1111-1111-1111-111111111111';
       await createSandboxPaymentLink({
         merchant_id: merchantId,
-        customer_email: `customer_${Date.now()}@example.com`,
+        customer_email: `delivered@resend.dev`,
         amount: simAmount,
         trigger_failure_immediately: true,
         failure_code: selectedError,

@@ -30,7 +30,9 @@ func NewResendProvider(apiKey, fromEmail string) *ResendProvider {
 		fromEmail = os.Getenv("RESEND_FROM_EMAIL")
 	}
 	if fromEmail == "" {
-		fromEmail = "ReviveOS Recovery <recoveries@reviveos.io>"
+		fromEmail = "ReviveOS Recovery <noreply@revive-os.me>"
+	} else if !strings.Contains(fromEmail, "<") {
+		fromEmail = fmt.Sprintf("ReviveOS Recovery <%s>", fromEmail)
 	}
 
 	return &ResendProvider{
@@ -80,6 +82,12 @@ func (r *ResendProvider) SendRecoveryNotification(ctx context.Context, req Notif
 		}, errors.New("cannot send recovery notification: customer email is empty")
 	}
 
+	recipient := req.CustomerEmail
+	// If a dummy example.com or sandbox.io address was used in simulation, redirect to Resend's test inbox
+	if strings.HasSuffix(recipient, "@example.com") || strings.HasSuffix(recipient, "@sandbox.io") {
+		recipient = "delivered@resend.dev"
+	}
+
 	merchantName := req.MerchantName
 	if merchantName == "" {
 		merchantName = "Your Merchant"
@@ -95,7 +103,7 @@ func (r *ResendProvider) SendRecoveryNotification(ctx context.Context, req Notif
 
 	payload := resendEmailRequest{
 		From:    r.FromEmail,
-		To:      []string{req.CustomerEmail},
+		To:      []string{recipient},
 		Subject: subject,
 		HTML:    htmlContent,
 	}

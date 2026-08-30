@@ -10,12 +10,14 @@ import (
 
 	"github.com/hibiken/asynq"
 	"github.com/reviveos/utils/db"
+	"github.com/reviveos/utils/env"
 	"github.com/reviveos/utils/outbox"
 	"github.com/reviveos/utils/queue"
 	"github.com/reviveos/worker/internal/tasks"
 )
 
 func main() {
+	env.Load()
 	log.Println("Starting ReviveOS Worker & Outbox Relay...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

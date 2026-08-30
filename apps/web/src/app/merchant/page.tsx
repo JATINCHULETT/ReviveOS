@@ -83,7 +83,7 @@ export default function MerchantPortalPage() {
     try {
       const res = await createSandboxPaymentLink({
         merchant_id: data.merchant.id,
-        customer_email: sbEmail || `cust_${Date.now()}@sandbox.io`,
+        customer_email: sbEmail.trim() || 'delivered@resend.dev',
         amount: parseFloat(sbAmount) || 500,
         trigger_failure_immediately: sbTriggerFail,
         failure_code: sbFailureCode,

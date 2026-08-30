@@ -591,7 +591,7 @@ func MerchantSandboxPaymentLinkHandler(pool *pgxpool.Pool) http.HandlerFunc {
 				go func() {
 					bgCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 					defer cancel()
-					_, _ = notifProv.SendRecoveryNotification(bgCtx, notificationservice.NotificationRequest{
+					notifRes, notifErr := notifProv.SendRecoveryNotification(bgCtx, notificationservice.NotificationRequest{
 						PaymentID:     paymentID,
 						WorkflowID:    workflowID,
 						MerchantName:  "ReviveOS Merchant",
@@ -603,6 +603,11 @@ func MerchantSandboxPaymentLinkHandler(pool *pgxpool.Pool) http.HandlerFunc {
 						FailureReason: req.FailureCode,
 						ActionType:    "PAYMENT_LINK",
 					})
+					if notifErr != nil {
+						log.Printf("[Sandbox] Warning: Recovery email dispatch failed for %s: %v", req.CustomerEmail, notifErr)
+					} else if notifRes != nil && notifRes.Status == "SENT" {
+						log.Printf("[Sandbox] Success: Recovery email dispatched to %s (MsgID: %s)", req.CustomerEmail, notifRes.MessageID)
+					}
 				}()
 			}
 		}

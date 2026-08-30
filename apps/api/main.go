@@ -11,10 +11,12 @@ import (
 
 	"github.com/reviveos/api/handlers"
 	"github.com/reviveos/utils/db"
+	"github.com/reviveos/utils/env"
 	"github.com/reviveos/worker/runner"
 )
 
 func main() {
+	env.Load()
 	log.Println("Starting ReviveOS API Server...")
 
 	port := os.Getenv("PORT")
