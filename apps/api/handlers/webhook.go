@@ -44,6 +44,24 @@ type RazorpayWebhookPayload struct {
 				CreatedAt        int64  `json:"created_at"`
 			} `json:"entity"`
 		} `json:"payment"`
+		PaymentLink struct {
+			Entity struct {
+				ID          string                 `json:"id"`
+				Amount      int64                  `json:"amount"` // in paise
+				Currency    string                 `json:"currency"`
+				Status      string                 `json:"status"`
+				Description string                 `json:"description"`
+				ShortURL    string                 `json:"short_url"`
+				ReferenceID string                 `json:"reference_id"`
+				Customer    struct {
+					Name    string `json:"name"`
+					Email   string `json:"email"`
+					Contact string `json:"contact"`
+				} `json:"customer"`
+				Notes     map[string]interface{} `json:"notes,omitempty"`
+				CreatedAt int64                  `json:"created_at"`
+			} `json:"entity"`
+		} `json:"payment_link"`
 		Subscription struct {
 			Entity struct {
 				ID         string `json:"id"`
@@ -109,6 +127,9 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		razorpayPaymentID := payload.Payload.Payment.Entity.ID
+		if razorpayPaymentID == "" {
+			razorpayPaymentID = payload.Payload.PaymentLink.Entity.ID
+		}
 
 		ctx := r.Context()
 
@@ -134,7 +155,135 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 
 		log.Printf("[Webhook] WEBHOOK_RECEIVED: Event ID=%s, Type=%s, PaymentID=%s", eventID, eventType, razorpayPaymentID)
 
-		// 6. If payment.failed, ingest payment and publish recovery:analyze task to transactional outbox
+		// 6. Handle Payment Link Created (from Razorpay Dashboard or API)
+		if strings.EqualFold(eventType, "payment_link.created") {
+			plink := payload.Payload.PaymentLink.Entity
+			if plink.ID != "" {
+				amountFloat := float64(plink.Amount) / 100.0
+				custEmail := strings.TrimSpace(plink.Customer.Email)
+				custPhone := strings.TrimSpace(plink.Customer.Contact)
+				if plink.Notes != nil {
+					if cEmail, ok := plink.Notes["customer_email"].(string); ok && cEmail != "" {
+						custEmail = strings.TrimSpace(cEmail)
+					}
+				}
+
+				tx, err := pool.Begin(ctx)
+				if err == nil {
+					defer tx.Rollback(ctx)
+
+					var merchantID string
+					_ = tx.QueryRow(ctx, "SELECT id::text FROM merchants ORDER BY created_at ASC LIMIT 1").Scan(&merchantID)
+					if merchantID == "" {
+						_ = tx.QueryRow(ctx, "INSERT INTO merchants (name) VALUES ('Default Merchant') RETURNING id::text").Scan(&merchantID)
+					}
+
+					var customerID string
+					if custEmail != "" {
+						_ = tx.QueryRow(ctx, "SELECT id::text FROM customers WHERE merchant_id = $1 AND email = $2 LIMIT 1", merchantID, custEmail).Scan(&customerID)
+					}
+					if customerID == "" {
+						if custEmail == "" {
+							custEmail = fmt.Sprintf("cust_%s@revive-os.me", plink.ID)
+						}
+						_ = tx.QueryRow(ctx, "INSERT INTO customers (merchant_id, email, phone) VALUES ($1, $2, $3) RETURNING id::text", merchantID, custEmail, custPhone).Scan(&customerID)
+					}
+
+					var existingPayID string
+					_ = tx.QueryRow(ctx, "SELECT id::text FROM payments WHERE razorpay_payment_id = $1 LIMIT 1", plink.ID).Scan(&existingPayID)
+					if existingPayID == "" {
+						_, _ = tx.Exec(ctx, `
+							INSERT INTO payments (merchant_id, customer_id, amount, currency, status, method, razorpay_payment_id)
+							VALUES ($1, $2, $3, $4, 'PENDING', 'payment_link', $5)
+						`, merchantID, customerID, amountFloat, plink.Currency, plink.ID)
+					}
+
+					_, _ = tx.Exec(ctx, "UPDATE payment_events SET processing_status = 'PROCESSED', processed = true, processed_at = CURRENT_TIMESTAMP WHERE id = $1", insertedEventID)
+					_ = tx.Commit(ctx)
+					log.Printf("[Webhook] PAYMENT_LINK_CREATED: Ingested link %s for customer %s (%.2f %s)", plink.ID, custEmail, amountFloat, plink.Currency)
+				}
+			}
+		}
+
+		// 7. Handle Payment Success / Captured / Payment Link Paid
+		if strings.EqualFold(eventType, "payment.captured") || strings.EqualFold(eventType, "payment_link.paid") || strings.EqualFold(eventType, "order.paid") {
+			paymentEntity := payload.Payload.Payment.Entity
+			plink := payload.Payload.PaymentLink.Entity
+
+			amountFloat := float64(paymentEntity.Amount) / 100.0
+			if amountFloat == 0 {
+				amountFloat = float64(plink.Amount) / 100.0
+			}
+
+			var searchRefs []string
+			if paymentEntity.ID != "" {
+				searchRefs = append(searchRefs, paymentEntity.ID)
+			}
+			if paymentEntity.InvoiceID != "" {
+				searchRefs = append(searchRefs, paymentEntity.InvoiceID)
+			}
+			if plink.ID != "" {
+				searchRefs = append(searchRefs, plink.ID)
+			}
+			if paymentEntity.Notes != nil {
+				if pid, ok := paymentEntity.Notes["payment_id"].(string); ok && pid != "" {
+					searchRefs = append(searchRefs, pid)
+				}
+			}
+			if strings.HasPrefix(paymentEntity.Description, "Payment recovery for ") {
+				searchRefs = append(searchRefs, strings.TrimSpace(strings.TrimPrefix(paymentEntity.Description, "Payment recovery for ")))
+			}
+
+			tx, err := pool.Begin(ctx)
+			if err == nil {
+				defer tx.Rollback(ctx)
+
+				var paymentUUID string
+				for _, ref := range searchRefs {
+					if ref == "" {
+						continue
+					}
+					_ = tx.QueryRow(ctx, "SELECT id::text FROM payments WHERE id::text = $1 OR razorpay_payment_id = $1 LIMIT 1", ref).Scan(&paymentUUID)
+					if paymentUUID != "" {
+						break
+					}
+				}
+
+				if paymentUUID != "" {
+					_, _ = tx.Exec(ctx, "UPDATE payments SET status = 'CAPTURED', updated_at = CURRENT_TIMESTAMP WHERE id::text = $1", paymentUUID)
+					_, _ = tx.Exec(ctx, "UPDATE recovery_workflows SET status = 'RECOVERED', updated_at = CURRENT_TIMESTAMP WHERE payment_id::text = $1", paymentUUID)
+					_, _ = tx.Exec(ctx, `
+						INSERT INTO recovery_outcomes (payment_id, recovered, recovered_amount, created_at)
+						VALUES ($1, true, $2, CURRENT_TIMESTAMP)
+					`, paymentUUID, amountFloat)
+					log.Printf("[Webhook] PAYMENT_RECOVERED: Payment %s marked CAPTURED and workflow RECOVERED (%.2f)", paymentUUID, amountFloat)
+				}
+
+				_, _ = tx.Exec(ctx, "UPDATE payment_events SET processing_status = 'PROCESSED', processed = true, processed_at = CURRENT_TIMESTAMP WHERE id = $1", insertedEventID)
+				_ = tx.Commit(ctx)
+			}
+		}
+
+		// 8. Handle Payment Link Cancelled / Expired
+		if strings.EqualFold(eventType, "payment_link.cancelled") || strings.EqualFold(eventType, "payment_link.expired") {
+			plink := payload.Payload.PaymentLink.Entity
+			if plink.ID != "" {
+				tx, err := pool.Begin(ctx)
+				if err == nil {
+					defer tx.Rollback(ctx)
+					var paymentUUID string
+					_ = tx.QueryRow(ctx, "SELECT id::text FROM payments WHERE razorpay_payment_id = $1 LIMIT 1", plink.ID).Scan(&paymentUUID)
+					if paymentUUID != "" {
+						_, _ = tx.Exec(ctx, "UPDATE payments SET status = 'CANCELLED', updated_at = CURRENT_TIMESTAMP WHERE id::text = $1", paymentUUID)
+						_, _ = tx.Exec(ctx, "UPDATE recovery_workflows SET status = 'HALTED', updated_at = CURRENT_TIMESTAMP WHERE payment_id::text = $1", paymentUUID)
+					}
+					_, _ = tx.Exec(ctx, "UPDATE payment_events SET processing_status = 'PROCESSED', processed = true, processed_at = CURRENT_TIMESTAMP WHERE id = $1", insertedEventID)
+					_ = tx.Commit(ctx)
+				}
+			}
+		}
+
+		// 9. If payment.failed, ingest payment and publish recovery:analyze task to transactional outbox
 		if strings.EqualFold(eventType, "payment.failed") && razorpayPaymentID != "" {
 			paymentEntity := payload.Payload.Payment.Entity
 			amountFloat := float64(paymentEntity.Amount) / 100.0 // paise to INR
