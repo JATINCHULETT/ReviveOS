@@ -192,10 +192,23 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 					var existingPayID string
 					_ = tx.QueryRow(ctx, "SELECT id::text FROM payments WHERE razorpay_payment_id = $1 LIMIT 1", plink.ID).Scan(&existingPayID)
 					if existingPayID == "" {
-						_, _ = tx.Exec(ctx, `
+						_ = tx.QueryRow(ctx, `
 							INSERT INTO payments (merchant_id, customer_id, amount, currency, status, method, razorpay_payment_id)
 							VALUES ($1, $2, $3, $4, 'PENDING', 'payment_link', $5)
-						`, merchantID, customerID, amountFloat, plink.Currency, plink.ID)
+							RETURNING id::text
+						`, merchantID, customerID, amountFloat, plink.Currency, plink.ID).Scan(&existingPayID)
+					}
+
+					// Ensure recovery workflow exists so link is immediately visible in the dashboard
+					if existingPayID != "" {
+						var existingWfID string
+						_ = tx.QueryRow(ctx, "SELECT id::text FROM recovery_workflows WHERE payment_id::text = $1 LIMIT 1", existingPayID).Scan(&existingWfID)
+						if existingWfID == "" {
+							_, _ = tx.Exec(ctx, `
+								INSERT INTO recovery_workflows (payment_id, merchant_id, status, selected_action, recovery_probability, created_at, updated_at)
+								VALUES ($1, $2, 'SCHEDULED', 'PAYMENT_LINK', 0.80, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+							`, existingPayID, merchantID)
+						}
 					}
 
 					_, _ = tx.Exec(ctx, "UPDATE payment_events SET processing_status = 'PROCESSED', processed = true, processed_at = CURRENT_TIMESTAMP WHERE id = $1", insertedEventID)
@@ -486,13 +499,21 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			}
 
 			// 4. Ensure immediate Recovery Workflow creation so it appears in the dashboard instantly
-			var workflowUUID string
-			_ = tx.QueryRow(ctx, `
-				INSERT INTO recovery_workflows (payment_id, merchant_id, status, selected_action, recovery_probability, created_at, updated_at)
-				VALUES ($1, $2, 'SCHEDULED', 'DELAYED_RETRY', 0.65, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-				ON CONFLICT (payment_id) DO UPDATE SET status = 'SCHEDULED', updated_at = CURRENT_TIMESTAMP
-				RETURNING id::text
-			`, paymentUUID, merchantID).Scan(&workflowUUID)
+			var existingWfID string
+			_ = tx.QueryRow(ctx, "SELECT id::text FROM recovery_workflows WHERE payment_id::text = $1 LIMIT 1", paymentUUID).Scan(&existingWfID)
+			if existingWfID != "" {
+				_, _ = tx.Exec(ctx, `
+					UPDATE recovery_workflows
+					SET status = 'SCHEDULED',
+					    updated_at = CURRENT_TIMESTAMP
+					WHERE id::text = $1
+				`, existingWfID)
+			} else {
+				_, _ = tx.Exec(ctx, `
+					INSERT INTO recovery_workflows (payment_id, merchant_id, status, selected_action, recovery_probability, created_at, updated_at)
+					VALUES ($1, $2, 'SCHEDULED', 'DELAYED_RETRY', 0.65, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+				`, paymentUUID, merchantID)
+			}
 
 			// Insert outbox event for worker background analysis
 			analyzePayload := map[string]interface{}{
