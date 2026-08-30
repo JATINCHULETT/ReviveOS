@@ -30,13 +30,14 @@ type RazorpayWebhookPayload struct {
 				Currency         string `json:"currency"`
 				Status           string `json:"status"`
 				Method           string `json:"method"`
-				Description      string `json:"description"`
-				Email            string `json:"email"`
-				Contact          string `json:"contact"`
-				SubscriptionID   string `json:"subscription_id,omitempty"`
-				InvoiceID        string `json:"invoice_id,omitempty"`
-				ErrorCode        string `json:"error_code"`
-				ErrorDescription string `json:"error_description"`
+				Description      string                 `json:"description"`
+				Email            string                 `json:"email"`
+				Contact          string                 `json:"contact"`
+				SubscriptionID   string                 `json:"subscription_id,omitempty"`
+				InvoiceID        string                 `json:"invoice_id,omitempty"`
+				Notes            map[string]interface{} `json:"notes,omitempty"`
+				ErrorCode        string                 `json:"error_code"`
+				ErrorDescription string                 `json:"error_description"`
 				ErrorSource      string `json:"error_source"`
 				ErrorStep        string `json:"error_step"`
 				ErrorReason      string `json:"error_reason"`
@@ -183,36 +184,47 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			custPhone := strings.TrimSpace(paymentEntity.Contact)
 			description := strings.TrimSpace(paymentEntity.Description)
 
-			// 1. If Razorpay returns a placeholder email like void@razorpay.com or empty email,
-			// check if this payment was an attempt on a recovery link with description "Payment recovery for <original_payment_id>"
-			if strings.EqualFold(custEmail, "void@razorpay.com") || custEmail == "" || strings.HasPrefix(strings.ToLower(custEmail), "void@") {
-				custEmail = ""
-				if strings.HasPrefix(description, "Payment recovery for ") {
-					origPaymentRef := strings.TrimPrefix(description, "Payment recovery for ")
-					origPaymentRef = strings.TrimSpace(origPaymentRef)
-					if origPaymentRef != "" {
-						var origCustID, origEmail, origPhone string
-						lookupOrigErr := tx.QueryRow(ctx, `
-							SELECT p.customer_id::text, COALESCE(c.email, ''), COALESCE(c.phone, '')
-							FROM payments p
-							JOIN customers c ON p.customer_id = c.id
-							WHERE p.id::text = $1 OR p.razorpay_payment_id = $1
-							LIMIT 1
-						`, origPaymentRef).Scan(&origCustID, &origEmail, &origPhone)
-						if lookupOrigErr == nil && origCustID != "" {
-							customerID = origCustID
-							custEmail = origEmail
-							if custPhone == "" {
-								custPhone = origPhone
-							}
-							log.Printf("[Webhook] Resolved customer %s (%s) from recovery description: %s", customerID, custEmail, description)
-						}
+			// 1. If this payment is an attempt on a ReviveOS recovery payment link,
+			// always resolve the original registered customer who was issued the link
+			var origPaymentRef string
+			if paymentEntity.Notes != nil {
+				if pid, ok := paymentEntity.Notes["payment_id"].(string); ok && pid != "" {
+					origPaymentRef = strings.TrimSpace(pid)
+				}
+				if cEmail, ok := paymentEntity.Notes["customer_email"].(string); ok && cEmail != "" {
+					custEmail = strings.TrimSpace(cEmail)
+				}
+			}
+			if origPaymentRef == "" && strings.HasPrefix(description, "Payment recovery for ") {
+				origPaymentRef = strings.TrimSpace(strings.TrimPrefix(description, "Payment recovery for "))
+			}
+
+			if origPaymentRef != "" {
+				var origCustID, origEmail, origPhone string
+				lookupOrigErr := tx.QueryRow(ctx, `
+					SELECT p.customer_id::text, COALESCE(c.email, ''), COALESCE(c.phone, '')
+					FROM payments p
+					JOIN customers c ON p.customer_id = c.id
+					WHERE p.id::text = $1 OR p.razorpay_payment_id = $1
+					LIMIT 1
+				`, origPaymentRef).Scan(&origCustID, &origEmail, &origPhone)
+				if lookupOrigErr == nil && origCustID != "" {
+					customerID = origCustID
+					custEmail = origEmail
+					if custPhone == "" {
+						custPhone = origPhone
 					}
+					log.Printf("[Webhook] Successfully attributed recovery retry to registered customer %s (%s) for parent payment: %s", customerID, custEmail, origPaymentRef)
 				}
 			}
 
 			// 2. If not already resolved from recovery reference, query by email or phone
 			if customerID == "" {
+				// Clean void@ placeholders
+				if strings.EqualFold(custEmail, "void@razorpay.com") || strings.HasPrefix(strings.ToLower(custEmail), "void@") {
+					custEmail = ""
+				}
+
 				var lookupErr error
 				if custEmail != "" {
 					lookupErr = tx.QueryRow(ctx, `

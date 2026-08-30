@@ -178,6 +178,17 @@ func (r *RazorpayPaymentProvider) CreateRetryAttemptWithCustomer(ctx context.Con
 	// Amount in smallest unit (paise)
 	amountPaise := int64(amount * 100)
 
+	notesMap := map[string]string{
+		"payment_id":      paymentID,
+		"recovery_origin": "reviveos",
+	}
+	if customerEmail != "" {
+		notesMap["customer_email"] = customerEmail
+	}
+	if customerPhone != "" {
+		notesMap["customer_phone"] = customerPhone
+	}
+
 	payload := map[string]interface{}{
 		"amount":       amountPaise,
 		"currency":     "INR",
@@ -187,6 +198,7 @@ func (r *RazorpayPaymentProvider) CreateRetryAttemptWithCustomer(ctx context.Con
 			"sms":   customerPhone != "",
 			"email": customerEmail != "",
 		},
+		"notes": notesMap,
 	}
 
 	if customerEmail != "" || customerPhone != "" || customerName != "" {
