@@ -179,19 +179,26 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 
 			// Get or create customer
 			var customerID string
-			custEmail := paymentEntity.Email
-			if custEmail == "" {
-				custEmail = fmt.Sprintf("cust_%s@example.com", razorpayPaymentID)
-			}
-			custPhone := paymentEntity.Contact
-			if custPhone == "" {
-				custPhone = "+919999999999"
+			custEmail := strings.TrimSpace(paymentEntity.Email)
+			custPhone := strings.TrimSpace(paymentEntity.Contact)
+
+			var lookupErr error
+			if custEmail != "" {
+				lookupErr = tx.QueryRow(ctx, `
+					SELECT id::text FROM customers WHERE merchant_id = $1 AND email = $2 LIMIT 1
+				`, merchantID, custEmail).Scan(&customerID)
+			} else if custPhone != "" {
+				lookupErr = tx.QueryRow(ctx, `
+					SELECT id::text FROM customers WHERE merchant_id = $1 AND phone = $2 LIMIT 1
+				`, merchantID, custPhone).Scan(&customerID)
+			} else {
+				lookupErr = fmt.Errorf("no email or phone provided")
 			}
 
-			err = tx.QueryRow(ctx, `
-				SELECT id::text FROM customers WHERE merchant_id = $1 AND (email = $2 OR phone = $3) LIMIT 1
-			`, merchantID, custEmail, custPhone).Scan(&customerID)
-			if err != nil {
+			if lookupErr != nil || customerID == "" {
+				if custEmail == "" {
+					custEmail = fmt.Sprintf("cust_%s@revive-os.me", razorpayPaymentID)
+				}
 				err = tx.QueryRow(ctx, `
 					INSERT INTO customers (merchant_id, email, phone)
 					VALUES ($1, $2, $3)

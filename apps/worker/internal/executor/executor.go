@@ -348,8 +348,7 @@ func (e *RecoveryExecutor) ExecuteWorkflow(ctx context.Context, workflowID strin
 	`, actionStatus, actionResultStr, actionUUID)
 
 	// Automated Customer Notification Dispatch for recovery links/notifications
-	if (actionStr == "PAYMENT_LINK" || actionStr == "CUSTOMER_NOTIFICATION" || actionStr == "PAYMENT_METHOD_UPDATE") &&
-		!communicationOptOut && customerEmail.Valid && customerEmail.String != "" && e.notificationProvider != nil {
+	if actionStr != "NO_ACTION" && !communicationOptOut && customerEmail.Valid && customerEmail.String != "" && e.notificationProvider != nil {
 
 		var merchantName string
 		_ = e.pool.QueryRow(ctx, "SELECT name FROM merchants WHERE id::text = $1", merchantID).Scan(&merchantName)
