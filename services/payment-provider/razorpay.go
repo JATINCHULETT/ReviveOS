@@ -184,8 +184,8 @@ func (r *RazorpayPaymentProvider) CreateRetryAttemptWithCustomer(ctx context.Con
 		"description":  fmt.Sprintf("Payment recovery for %s", paymentID),
 		"reference_id": fmt.Sprintf("rec_%s_%d", paymentID, time.Now().Unix()),
 		"notify": map[string]bool{
-			"sms":   true,
-			"email": true,
+			"sms":   customerPhone != "",
+			"email": customerEmail != "",
 		},
 	}
 

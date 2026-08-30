@@ -175,6 +175,16 @@ func TestRazorpay_MockServer_RealHTTPProtocols(t *testing.T) {
 		t.Errorf("Unexpected retry result: %+v", retryRes)
 	}
 	t.Logf("CreateRetryAttempt created payment link: AttemptID=%s, Status=%s", retryRes.AttemptID, retryRes.Status)
+
+	// 7. Test CreateRetryAttemptWithCustomer (email only, no SMS phone)
+	retryWithCustRes, err := provider.CreateRetryAttemptWithCustomer(ctx, "pay_failed_456", 1500.00, "customer@example.com", "", "Test Customer")
+	if err != nil {
+		t.Fatalf("CreateRetryAttemptWithCustomer failed: %v", err)
+	}
+	if retryWithCustRes.Status != "SUCCESS" || retryWithCustRes.AttemptID != "plink_test_999" {
+		t.Errorf("Unexpected retry result with customer: %+v", retryWithCustRes)
+	}
+	t.Logf("CreateRetryAttemptWithCustomer succeeded: AttemptID=%s", retryWithCustRes.AttemptID)
 }
 
 func TestRazorpay_LiveCredentialsOrBlocked(t *testing.T) {
