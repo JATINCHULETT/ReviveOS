@@ -24,24 +24,26 @@ type RazorpayWebhookPayload struct {
 	Payload   struct {
 		Payment struct {
 			Entity struct {
-				ID               string `json:"id"`
-				Entity           string `json:"entity"`
-				Amount           int64  `json:"amount"` // in paise
-				Currency         string `json:"currency"`
-				Status           string `json:"status"`
-				Method           string `json:"method"`
+				ID               string                 `json:"id"`
+				Entity           string                 `json:"entity"`
+				Amount           int64                  `json:"amount"` // in paise
+				Currency         string                 `json:"currency"`
+				Status           string                 `json:"status"`
+				Method           string                 `json:"method"`
 				Description      string                 `json:"description"`
 				Email            string                 `json:"email"`
 				Contact          string                 `json:"contact"`
 				SubscriptionID   string                 `json:"subscription_id,omitempty"`
 				InvoiceID        string                 `json:"invoice_id,omitempty"`
+				OrderID          string                 `json:"order_id,omitempty"`
+				Customer         interface{}            `json:"customer,omitempty"`
 				Notes            map[string]interface{} `json:"notes,omitempty"`
 				ErrorCode        string                 `json:"error_code"`
 				ErrorDescription string                 `json:"error_description"`
-				ErrorSource      string `json:"error_source"`
-				ErrorStep        string `json:"error_step"`
-				ErrorReason      string `json:"error_reason"`
-				CreatedAt        int64  `json:"created_at"`
+				ErrorSource      string                 `json:"error_source"`
+				ErrorStep        string                 `json:"error_step"`
+				ErrorReason      string                 `json:"error_reason"`
+				CreatedAt        int64                  `json:"created_at"`
 			} `json:"entity"`
 		} `json:"payment"`
 		PaymentLink struct {
@@ -53,15 +55,24 @@ type RazorpayWebhookPayload struct {
 				Description string                 `json:"description"`
 				ShortURL    string                 `json:"short_url"`
 				ReferenceID string                 `json:"reference_id"`
-				Customer    struct {
-					Name    string `json:"name"`
-					Email   string `json:"email"`
-					Contact string `json:"contact"`
-				} `json:"customer"`
-				Notes     map[string]interface{} `json:"notes,omitempty"`
-				CreatedAt int64                  `json:"created_at"`
+				Customer    interface{}            `json:"customer,omitempty"`
+				Notes       map[string]interface{} `json:"notes,omitempty"`
+				CreatedAt   int64                  `json:"created_at"`
 			} `json:"entity"`
 		} `json:"payment_link"`
+		Invoice struct {
+			Entity struct {
+				ID          string                 `json:"id"`
+				Amount      int64                  `json:"amount"`
+				Currency    string                 `json:"currency"`
+				Status      string                 `json:"status"`
+				Description string                 `json:"description"`
+				ShortURL    string                 `json:"short_url"`
+				Customer    interface{}            `json:"customer,omitempty"`
+				Notes       map[string]interface{} `json:"notes,omitempty"`
+				CreatedAt   int64                  `json:"created_at"`
+			} `json:"entity"`
+		} `json:"invoice"`
 		Subscription struct {
 			Entity struct {
 				ID         string `json:"id"`
@@ -73,6 +84,24 @@ type RazorpayWebhookPayload struct {
 		} `json:"subscription"`
 	} `json:"payload"`
 	CreatedAt int64 `json:"created_at"`
+}
+
+func extractCustomerDetails(custRaw interface{}) (email, contact, name string) {
+	if custRaw == nil {
+		return "", "", ""
+	}
+	if custMap, ok := custRaw.(map[string]interface{}); ok {
+		if em, ok := custMap["email"].(string); ok {
+			email = strings.TrimSpace(em)
+		}
+		if cn, ok := custMap["contact"].(string); ok {
+			contact = strings.TrimSpace(cn)
+		}
+		if nm, ok := custMap["name"].(string); ok {
+			name = strings.TrimSpace(nm)
+		}
+	}
+	return email, contact, name
 }
 
 // RazorpayWebhookHandler processes incoming webhooks from Razorpay with signature verification and persistent deduplication.
@@ -155,17 +184,40 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 
 		log.Printf("[Webhook] WEBHOOK_RECEIVED: Event ID=%s, Type=%s, PaymentID=%s", eventID, eventType, razorpayPaymentID)
 
-		// 6. Handle Payment Link Created (from Razorpay Dashboard or API)
-		if strings.EqualFold(eventType, "payment_link.created") {
-			plink := payload.Payload.PaymentLink.Entity
-			if plink.ID != "" {
-				amountFloat := float64(plink.Amount) / 100.0
-				custEmail := strings.TrimSpace(plink.Customer.Email)
-				custPhone := strings.TrimSpace(plink.Customer.Contact)
+		// 6. Handle Payment Link / Invoice Created or Issued (from Razorpay Dashboard or API)
+		if strings.EqualFold(eventType, "payment_link.created") || strings.EqualFold(eventType, "payment_link.issued") || strings.EqualFold(eventType, "invoice.created") || strings.EqualFold(eventType, "invoice.issued") {
+			var linkID, linkCurrency string
+			var linkAmount int64
+			var custEmail, custPhone, _ string
+
+			if payload.Payload.PaymentLink.Entity.ID != "" {
+				plink := payload.Payload.PaymentLink.Entity
+				linkID = plink.ID
+				linkAmount = plink.Amount
+				linkCurrency = plink.Currency
+				custEmail, custPhone, _ = extractCustomerDetails(plink.Customer)
 				if plink.Notes != nil {
 					if cEmail, ok := plink.Notes["customer_email"].(string); ok && cEmail != "" {
 						custEmail = strings.TrimSpace(cEmail)
 					}
+				}
+			} else if payload.Payload.Invoice.Entity.ID != "" {
+				inv := payload.Payload.Invoice.Entity
+				linkID = inv.ID
+				linkAmount = inv.Amount
+				linkCurrency = inv.Currency
+				custEmail, custPhone, _ = extractCustomerDetails(inv.Customer)
+				if inv.Notes != nil {
+					if cEmail, ok := inv.Notes["customer_email"].(string); ok && cEmail != "" {
+						custEmail = strings.TrimSpace(cEmail)
+					}
+				}
+			}
+
+			if linkID != "" {
+				amountFloat := float64(linkAmount) / 100.0
+				if linkCurrency == "" {
+					linkCurrency = "INR"
 				}
 
 				tx, err := pool.Begin(ctx)
@@ -184,19 +236,19 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 					}
 					if customerID == "" {
 						if custEmail == "" {
-							custEmail = fmt.Sprintf("cust_%s@revive-os.me", plink.ID)
+							custEmail = fmt.Sprintf("cust_%s@revive-os.me", linkID)
 						}
 						_ = tx.QueryRow(ctx, "INSERT INTO customers (merchant_id, email, phone) VALUES ($1, $2, $3) RETURNING id::text", merchantID, custEmail, custPhone).Scan(&customerID)
 					}
 
 					var existingPayID string
-					_ = tx.QueryRow(ctx, "SELECT id::text FROM payments WHERE razorpay_payment_id = $1 LIMIT 1", plink.ID).Scan(&existingPayID)
+					_ = tx.QueryRow(ctx, "SELECT id::text FROM payments WHERE razorpay_payment_id = $1 LIMIT 1", linkID).Scan(&existingPayID)
 					if existingPayID == "" {
 						_ = tx.QueryRow(ctx, `
 							INSERT INTO payments (merchant_id, customer_id, amount, currency, status, method, razorpay_payment_id)
 							VALUES ($1, $2, $3, $4, 'PENDING', 'payment_link', $5)
 							RETURNING id::text
-						`, merchantID, customerID, amountFloat, plink.Currency, plink.ID).Scan(&existingPayID)
+						`, merchantID, customerID, amountFloat, linkCurrency, linkID).Scan(&existingPayID)
 					}
 
 					// Ensure recovery workflow exists so link is immediately visible in the dashboard
@@ -213,7 +265,7 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 
 					_, _ = tx.Exec(ctx, "UPDATE payment_events SET processing_status = 'PROCESSED', processed = true, processed_at = CURRENT_TIMESTAMP WHERE id = $1", insertedEventID)
 					_ = tx.Commit(ctx)
-					log.Printf("[Webhook] PAYMENT_LINK_CREATED: Ingested link %s for customer %s (%.2f %s)", plink.ID, custEmail, amountFloat, plink.Currency)
+					log.Printf("[Webhook] PAYMENT_LINK_CREATED: Ingested link %s for customer %s (%.2f %s)", linkID, custEmail, amountFloat, linkCurrency)
 				}
 			}
 		}
@@ -345,15 +397,28 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			custEmail := strings.TrimSpace(paymentEntity.Email)
 			custPhone := strings.TrimSpace(paymentEntity.Contact)
 			description := strings.TrimSpace(paymentEntity.Description)
-			plink := payload.Payload.PaymentLink.Entity
+			// 1. Fallback to Payment Link / Invoice / Customer entity details if payment email is void@ or empty
+			plinkEmail, plinkPhone, _ := extractCustomerDetails(payload.Payload.PaymentLink.Entity.Customer)
+			invEmail, invPhone, _ := extractCustomerDetails(payload.Payload.Invoice.Entity.Customer)
+			payCustEmail, payCustPhone, _ := extractCustomerDetails(paymentEntity.Customer)
 
-			// 1. Fallback to Payment Link customer email/phone if payment entity has void@ placeholder or empty
 			if strings.EqualFold(custEmail, "void@razorpay.com") || custEmail == "" || strings.HasPrefix(strings.ToLower(custEmail), "void@") {
-				if plink.Customer.Email != "" && !strings.HasPrefix(strings.ToLower(plink.Customer.Email), "void@") {
-					custEmail = strings.TrimSpace(plink.Customer.Email)
+				if plinkEmail != "" && !strings.HasPrefix(strings.ToLower(plinkEmail), "void@") {
+					custEmail = plinkEmail
+				} else if invEmail != "" && !strings.HasPrefix(strings.ToLower(invEmail), "void@") {
+					custEmail = invEmail
+				} else if payCustEmail != "" && !strings.HasPrefix(strings.ToLower(payCustEmail), "void@") {
+					custEmail = payCustEmail
 				}
-				if custPhone == "" && plink.Customer.Contact != "" {
-					custPhone = strings.TrimSpace(plink.Customer.Contact)
+
+				if custPhone == "" {
+					if plinkPhone != "" {
+						custPhone = plinkPhone
+					} else if invPhone != "" {
+						custPhone = invPhone
+					} else if payCustPhone != "" {
+						custPhone = payCustPhone
+					}
 				}
 			}
 
@@ -371,11 +436,19 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			if origPaymentRef == "" && strings.HasPrefix(description, "Payment recovery for ") {
 				origPaymentRef = strings.TrimSpace(strings.TrimPrefix(description, "Payment recovery for "))
 			}
-			if origPaymentRef == "" && plink.ID != "" {
-				origPaymentRef = plink.ID
+			linkRefID := payload.Payload.PaymentLink.Entity.ID
+			if linkRefID == "" {
+				linkRefID = payload.Payload.Invoice.Entity.ID
 			}
-			if origPaymentRef == "" && paymentEntity.InvoiceID != "" {
-				origPaymentRef = paymentEntity.InvoiceID
+			if linkRefID == "" {
+				linkRefID = paymentEntity.InvoiceID
+			}
+			if linkRefID == "" {
+				linkRefID = paymentEntity.OrderID
+			}
+
+			if origPaymentRef == "" && linkRefID != "" {
+				origPaymentRef = linkRefID
 			}
 
 			if origPaymentRef != "" {
@@ -464,7 +537,7 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			var paymentUUID string
 			// Check if a payment with this razorpay payment id or payment link ID already exists
 			var existingPayUUID string
-			_ = tx.QueryRow(ctx, "SELECT id::text FROM payments WHERE razorpay_payment_id = $1 OR (razorpay_payment_id = $2 AND $2 != '') LIMIT 1", razorpayPaymentID, plink.ID).Scan(&existingPayUUID)
+			_ = tx.QueryRow(ctx, "SELECT id::text FROM payments WHERE razorpay_payment_id = $1 OR (razorpay_payment_id = $2 AND $2 != '') LIMIT 1", razorpayPaymentID, linkRefID).Scan(&existingPayUUID)
 
 			if existingPayUUID != "" {
 				paymentUUID = existingPayUUID
