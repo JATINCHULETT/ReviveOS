@@ -34,43 +34,43 @@ type RazorpayWebhookPayload struct {
 				Email            string                 `json:"email"`
 				Contact          string                 `json:"contact"`
 				SubscriptionID   string                 `json:"subscription_id,omitempty"`
-				InvoiceID        string                 `json:"invoice_id,omitempty"`
-				OrderID          string                 `json:"order_id,omitempty"`
-				Customer         interface{}            `json:"customer,omitempty"`
-				Notes            map[string]interface{} `json:"notes,omitempty"`
-				ErrorCode        string                 `json:"error_code"`
-				ErrorDescription string                 `json:"error_description"`
-				ErrorSource      string                 `json:"error_source"`
-				ErrorStep        string                 `json:"error_step"`
-				ErrorReason      string                 `json:"error_reason"`
-				CreatedAt        int64                  `json:"created_at"`
+				InvoiceID        string      `json:"invoice_id,omitempty"`
+				OrderID          string      `json:"order_id,omitempty"`
+				Customer         interface{} `json:"customer,omitempty"`
+				Notes            interface{} `json:"notes,omitempty"`
+				ErrorCode        string      `json:"error_code"`
+				ErrorDescription string      `json:"error_description"`
+				ErrorSource      string      `json:"error_source"`
+				ErrorStep        string      `json:"error_step"`
+				ErrorReason      string      `json:"error_reason"`
+				CreatedAt        int64       `json:"created_at"`
 			} `json:"entity"`
 		} `json:"payment"`
 		PaymentLink struct {
 			Entity struct {
-				ID          string                 `json:"id"`
-				Amount      int64                  `json:"amount"` // in paise
-				Currency    string                 `json:"currency"`
-				Status      string                 `json:"status"`
-				Description string                 `json:"description"`
-				ShortURL    string                 `json:"short_url"`
-				ReferenceID string                 `json:"reference_id"`
-				Customer    interface{}            `json:"customer,omitempty"`
-				Notes       map[string]interface{} `json:"notes,omitempty"`
-				CreatedAt   int64                  `json:"created_at"`
+				ID          string      `json:"id"`
+				Amount      int64       `json:"amount"` // in paise
+				Currency    string      `json:"currency"`
+				Status      string      `json:"status"`
+				Description string      `json:"description"`
+				ShortURL    string      `json:"short_url"`
+				ReferenceID string      `json:"reference_id"`
+				Customer    interface{} `json:"customer,omitempty"`
+				Notes       interface{} `json:"notes,omitempty"`
+				CreatedAt   int64       `json:"created_at"`
 			} `json:"entity"`
 		} `json:"payment_link"`
 		Invoice struct {
 			Entity struct {
-				ID          string                 `json:"id"`
-				Amount      int64                  `json:"amount"`
-				Currency    string                 `json:"currency"`
-				Status      string                 `json:"status"`
-				Description string                 `json:"description"`
-				ShortURL    string                 `json:"short_url"`
-				Customer    interface{}            `json:"customer,omitempty"`
-				Notes       map[string]interface{} `json:"notes,omitempty"`
-				CreatedAt   int64                  `json:"created_at"`
+				ID          string      `json:"id"`
+				Amount      int64       `json:"amount"`
+				Currency    string      `json:"currency"`
+				Status      string      `json:"status"`
+				Description string      `json:"description"`
+				ShortURL    string      `json:"short_url"`
+				Customer    interface{} `json:"customer,omitempty"`
+				Notes       interface{} `json:"notes,omitempty"`
+				CreatedAt   int64       `json:"created_at"`
 			} `json:"entity"`
 		} `json:"invoice"`
 		Subscription struct {
@@ -102,6 +102,23 @@ func extractCustomerDetails(custRaw interface{}) (email, contact, name string) {
 		}
 	}
 	return email, contact, name
+}
+
+func extractNotesMap(notesRaw interface{}) map[string]string {
+	res := make(map[string]string)
+	if notesRaw == nil {
+		return res
+	}
+	if notesMap, ok := notesRaw.(map[string]interface{}); ok {
+		for k, v := range notesMap {
+			if vStr, ok := v.(string); ok {
+				res[k] = strings.TrimSpace(vStr)
+			} else if v != nil {
+				res[k] = fmt.Sprintf("%v", v)
+			}
+		}
+	}
+	return res
 }
 
 // RazorpayWebhookHandler processes incoming webhooks from Razorpay with signature verification and persistent deduplication.
@@ -196,10 +213,9 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 				linkAmount = plink.Amount
 				linkCurrency = plink.Currency
 				custEmail, custPhone, _ = extractCustomerDetails(plink.Customer)
-				if plink.Notes != nil {
-					if cEmail, ok := plink.Notes["customer_email"].(string); ok && cEmail != "" {
-						custEmail = strings.TrimSpace(cEmail)
-					}
+				plinkNotes := extractNotesMap(plink.Notes)
+				if cEmail, ok := plinkNotes["customer_email"]; ok && cEmail != "" {
+					custEmail = cEmail
 				}
 			} else if payload.Payload.Invoice.Entity.ID != "" {
 				inv := payload.Payload.Invoice.Entity
@@ -207,10 +223,9 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 				linkAmount = inv.Amount
 				linkCurrency = inv.Currency
 				custEmail, custPhone, _ = extractCustomerDetails(inv.Customer)
-				if inv.Notes != nil {
-					if cEmail, ok := inv.Notes["customer_email"].(string); ok && cEmail != "" {
-						custEmail = strings.TrimSpace(cEmail)
-					}
+				invNotes := extractNotesMap(inv.Notes)
+				if cEmail, ok := invNotes["customer_email"]; ok && cEmail != "" {
+					custEmail = cEmail
 				}
 			}
 
@@ -290,10 +305,9 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			if plink.ID != "" {
 				searchRefs = append(searchRefs, plink.ID)
 			}
-			if paymentEntity.Notes != nil {
-				if pid, ok := paymentEntity.Notes["payment_id"].(string); ok && pid != "" {
-					searchRefs = append(searchRefs, pid)
-				}
+			payNotes := extractNotesMap(paymentEntity.Notes)
+			if pid, ok := payNotes["payment_id"]; ok && pid != "" {
+				searchRefs = append(searchRefs, pid)
 			}
 			if strings.HasPrefix(paymentEntity.Description, "Payment recovery for ") {
 				searchRefs = append(searchRefs, strings.TrimSpace(strings.TrimPrefix(paymentEntity.Description, "Payment recovery for ")))
@@ -425,13 +439,12 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			// 2. If this payment is an attempt on a ReviveOS recovery payment link or existing link,
 			// check notes, description, or payment link ID to resolve the registered customer
 			var origPaymentRef string
-			if paymentEntity.Notes != nil {
-				if pid, ok := paymentEntity.Notes["payment_id"].(string); ok && pid != "" {
-					origPaymentRef = strings.TrimSpace(pid)
-				}
-				if cEmail, ok := paymentEntity.Notes["customer_email"].(string); ok && cEmail != "" {
-					custEmail = strings.TrimSpace(cEmail)
-				}
+			payNotes := extractNotesMap(paymentEntity.Notes)
+			if pid, ok := payNotes["payment_id"]; ok && pid != "" {
+				origPaymentRef = pid
+			}
+			if cEmail, ok := payNotes["customer_email"]; ok && cEmail != "" {
+				custEmail = cEmail
 			}
 			if origPaymentRef == "" && strings.HasPrefix(description, "Payment recovery for ") {
 				origPaymentRef = strings.TrimSpace(strings.TrimPrefix(description, "Payment recovery for "))
