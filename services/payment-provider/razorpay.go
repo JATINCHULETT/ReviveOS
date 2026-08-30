@@ -14,6 +14,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // RazorpayPaymentProvider implements PaymentProvider for the real Razorpay API.
@@ -284,6 +286,164 @@ func (r *RazorpayPaymentProvider) CreateRetryAttemptWithCustomer(ctx context.Con
 		PaymentLinkURL:    linkResp.ShortURL,
 		CreatedAt:         time.Now().UTC(),
 	}, nil
+}
+
+// RazorpayPaymentLinkItem models a payment link object from Razorpay's API
+type RazorpayPaymentLinkItem struct {
+	ID          string                 `json:"id"`
+	Amount      int64                  `json:"amount"` // in paise
+	Currency    string                 `json:"currency"`
+	Status      string                 `json:"status"` // created, paid, cancelled, expired
+	Description string                 `json:"description"`
+	ShortURL    string                 `json:"short_url"`
+	Customer    map[string]interface{} `json:"customer"`
+	Notes       map[string]interface{} `json:"notes"`
+	CreatedAt   int64                  `json:"created_at"`
+}
+
+// FetchPaymentLinks fetches payment links directly from Razorpay REST API
+func (r *RazorpayPaymentProvider) FetchPaymentLinks(ctx context.Context, count int) ([]RazorpayPaymentLinkItem, error) {
+	if err := r.ValidateCredentials(); err != nil {
+		return nil, err
+	}
+	if count <= 0 {
+		count = 50
+	}
+	url := fmt.Sprintf("%s/payment_links?count=%d", r.BaseURL, count)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.SetBasicAuth(r.KeyID, r.KeySecret)
+
+	resp, err := r.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("razorpay returned status %d", resp.StatusCode)
+	}
+
+	var result struct {
+		Count        int                       `json:"count"`
+		PaymentLinks []RazorpayPaymentLinkItem `json:"payment_links"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+	return result.PaymentLinks, nil
+}
+
+// SyncRazorpayPaymentLinks pulls recent payment links from Razorpay and ensures they are recorded in ReviveOS
+func SyncRazorpayPaymentLinks(ctx context.Context, pool *pgxpool.Pool) error {
+	if pool == nil {
+		return nil
+	}
+	keyID := strings.TrimSpace(os.Getenv("RAZORPAY_KEY_ID"))
+	keySecret := strings.TrimSpace(os.Getenv("RAZORPAY_KEY_SECRET"))
+	baseURL := strings.TrimSpace(os.Getenv("RAZORPAY_BASE_URL"))
+	if keyID == "" || keySecret == "" {
+		return nil
+	}
+
+	rzp := NewRazorpayPaymentProvider(keyID, keySecret, baseURL)
+	links, err := rzp.FetchPaymentLinks(ctx, 50)
+	if err != nil {
+		return err
+	}
+
+	var merchantID string
+	_ = pool.QueryRow(ctx, "SELECT id::text FROM merchants ORDER BY created_at ASC LIMIT 1").Scan(&merchantID)
+	if merchantID == "" {
+		_ = pool.QueryRow(ctx, "INSERT INTO merchants (name) VALUES ('Default Merchant') RETURNING id::text").Scan(&merchantID)
+	}
+
+	for _, link := range links {
+		if link.ID == "" {
+			continue
+		}
+		amountFloat := float64(link.Amount) / 100.0
+		currency := link.Currency
+		if currency == "" {
+			currency = "INR"
+		}
+
+		var custEmail, custPhone string
+		if em, ok := link.Customer["email"].(string); ok {
+			custEmail = strings.TrimSpace(em)
+		}
+		if cn, ok := link.Customer["contact"].(string); ok {
+			custPhone = strings.TrimSpace(cn)
+		}
+		if custEmail == "" && link.Notes != nil {
+			if em, ok := link.Notes["customer_email"].(string); ok {
+				custEmail = strings.TrimSpace(em)
+			}
+		}
+		if custEmail == "" {
+			custEmail = fmt.Sprintf("cust_%s@revive-os.me", link.ID)
+		}
+
+		// 1. Customer
+		var customerID string
+		_ = pool.QueryRow(ctx, "SELECT id::text FROM customers WHERE merchant_id = $1 AND email = $2 LIMIT 1", merchantID, custEmail).Scan(&customerID)
+		if customerID == "" {
+			_ = pool.QueryRow(ctx, "INSERT INTO customers (merchant_id, email, phone) VALUES ($1, $2, $3) RETURNING id::text", merchantID, custEmail, custPhone).Scan(&customerID)
+		}
+
+		// 2. Payment status mapping
+		payStatus := "PENDING"
+		wfStatus := "SCHEDULED"
+		action := "PAYMENT_LINK"
+		prob := 0.80
+
+		switch strings.ToLower(link.Status) {
+		case "paid":
+			payStatus = "CAPTURED"
+			wfStatus = "RECOVERED"
+		case "cancelled", "expired":
+			payStatus = "CANCELLED"
+			wfStatus = "HALTED"
+		}
+
+		// 3. Payments record
+		var payID string
+		_ = pool.QueryRow(ctx, "SELECT id::text FROM payments WHERE razorpay_payment_id = $1 LIMIT 1", link.ID).Scan(&payID)
+		if payID == "" {
+			_ = pool.QueryRow(ctx, `
+				INSERT INTO payments (merchant_id, customer_id, amount, currency, status, method, razorpay_payment_id)
+				VALUES ($1, $2, $3, $4, $5, 'payment_link', $6)
+				RETURNING id::text
+			`, merchantID, customerID, amountFloat, currency, payStatus, link.ID).Scan(&payID)
+		} else {
+			_, _ = pool.Exec(ctx, `
+				UPDATE payments
+				SET status = $1, customer_id = $2, updated_at = CURRENT_TIMESTAMP
+				WHERE id::text = $3 AND status != 'CAPTURED'
+			`, payStatus, customerID, payID)
+		}
+
+		// 4. Recovery Workflow record
+		if payID != "" {
+			var wfID string
+			_ = pool.QueryRow(ctx, "SELECT id::text FROM recovery_workflows WHERE payment_id::text = $1 LIMIT 1", payID).Scan(&wfID)
+			if wfID == "" {
+				_, _ = pool.Exec(ctx, `
+					INSERT INTO recovery_workflows (payment_id, merchant_id, status, selected_action, recovery_probability, created_at, updated_at)
+					VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+				`, payID, merchantID, wfStatus, action, prob)
+			} else if wfStatus == "RECOVERED" || wfStatus == "HALTED" {
+				_, _ = pool.Exec(ctx, `
+					UPDATE recovery_workflows
+					SET status = $1, updated_at = CURRENT_TIMESTAMP
+					WHERE id::text = $2
+				`, wfStatus, wfID)
+			}
+		}
+	}
+	return nil
 }
 
 // VerifyWebhookSignature verifies the X-Razorpay-Signature using HMAC-SHA256.

@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	paymentprovider "github.com/reviveos/services/payment-provider"
 )
 
 type WorkflowSummary struct {
@@ -149,6 +150,9 @@ func WorkflowsHandler(pool *pgxpool.Pool) http.HandlerFunc {
 }
 
 func listWorkflows(ctx context.Context, pool *pgxpool.Pool, w http.ResponseWriter, r *http.Request) {
+	// Automatically pull and sync payment links from Razorpay
+	_ = paymentprovider.SyncRazorpayPaymentLinks(ctx, pool)
+
 	query := r.URL.Query()
 
 	limit := 50
