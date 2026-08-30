@@ -14,7 +14,11 @@ func NewPaymentProvider(providerType string, pool *pgxpool.Pool) (PaymentProvide
 		providerType = os.Getenv("PAYMENT_PROVIDER")
 	}
 	if providerType == "" {
-		providerType = "local"
+		if os.Getenv("RAZORPAY_KEY_ID") != "" && os.Getenv("RAZORPAY_KEY_SECRET") != "" {
+			providerType = "razorpay"
+		} else {
+			providerType = "local"
+		}
 	}
 
 	switch strings.ToLower(providerType) {

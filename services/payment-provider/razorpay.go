@@ -189,11 +189,16 @@ func (r *RazorpayPaymentProvider) CreateRetryAttemptWithCustomer(ctx context.Con
 		notesMap["customer_phone"] = customerPhone
 	}
 
+	refID := fmt.Sprintf("rec_%d", time.Now().UnixNano())
+	if len(refID) > 30 {
+		refID = refID[:30]
+	}
+
 	payload := map[string]interface{}{
 		"amount":       amountPaise,
 		"currency":     "INR",
 		"description":  fmt.Sprintf("Payment recovery for %s", paymentID),
-		"reference_id": fmt.Sprintf("rec_%s_%d", paymentID, time.Now().Unix()),
+		"reference_id": refID,
 		"notify": map[string]bool{
 			"sms":   customerPhone != "",
 			"email": customerEmail != "",
