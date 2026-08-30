@@ -332,9 +332,20 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			custEmail := strings.TrimSpace(paymentEntity.Email)
 			custPhone := strings.TrimSpace(paymentEntity.Contact)
 			description := strings.TrimSpace(paymentEntity.Description)
+			plink := payload.Payload.PaymentLink.Entity
 
-			// 1. If this payment is an attempt on a ReviveOS recovery payment link,
-			// always resolve the original registered customer who was issued the link
+			// 1. Fallback to Payment Link customer email/phone if payment entity has void@ placeholder or empty
+			if strings.EqualFold(custEmail, "void@razorpay.com") || custEmail == "" || strings.HasPrefix(strings.ToLower(custEmail), "void@") {
+				if plink.Customer.Email != "" && !strings.HasPrefix(strings.ToLower(plink.Customer.Email), "void@") {
+					custEmail = strings.TrimSpace(plink.Customer.Email)
+				}
+				if custPhone == "" && plink.Customer.Contact != "" {
+					custPhone = strings.TrimSpace(plink.Customer.Contact)
+				}
+			}
+
+			// 2. If this payment is an attempt on a ReviveOS recovery payment link or existing link,
+			// check notes, description, or payment link ID to resolve the registered customer
 			var origPaymentRef string
 			if paymentEntity.Notes != nil {
 				if pid, ok := paymentEntity.Notes["payment_id"].(string); ok && pid != "" {
@@ -346,6 +357,12 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			}
 			if origPaymentRef == "" && strings.HasPrefix(description, "Payment recovery for ") {
 				origPaymentRef = strings.TrimSpace(strings.TrimPrefix(description, "Payment recovery for "))
+			}
+			if origPaymentRef == "" && plink.ID != "" {
+				origPaymentRef = plink.ID
+			}
+			if origPaymentRef == "" && paymentEntity.InvoiceID != "" {
+				origPaymentRef = paymentEntity.InvoiceID
 			}
 
 			if origPaymentRef != "" {
@@ -359,15 +376,17 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 				`, origPaymentRef).Scan(&origCustID, &origEmail, &origPhone)
 				if lookupOrigErr == nil && origCustID != "" {
 					customerID = origCustID
-					custEmail = origEmail
+					if custEmail == "" || strings.EqualFold(custEmail, "void@razorpay.com") || strings.HasPrefix(strings.ToLower(custEmail), "void@") {
+						custEmail = origEmail
+					}
 					if custPhone == "" {
 						custPhone = origPhone
 					}
-					log.Printf("[Webhook] Successfully attributed recovery retry to registered customer %s (%s) for parent payment: %s", customerID, custEmail, origPaymentRef)
+					log.Printf("[Webhook] Successfully attributed failure to registered customer %s (%s) for ref: %s", customerID, custEmail, origPaymentRef)
 				}
 			}
 
-			// 2. If not already resolved from recovery reference, query by email or phone
+			// 3. If not already resolved from recovery reference, query by email or phone
 			if customerID == "" {
 				// Clean void@ placeholders
 				if strings.EqualFold(custEmail, "void@razorpay.com") || strings.HasPrefix(strings.ToLower(custEmail), "void@") {
@@ -428,22 +447,54 @@ func RazorpayWebhookHandler(pool *pgxpool.Pool) http.HandlerFunc {
 				}
 			}
 
-			// Insert payment record
+			// Insert or update payment record
 			var paymentUUID string
-			err = tx.QueryRow(ctx, `
-				INSERT INTO payments (
-					merchant_id, customer_id, subscription_id, amount, currency, status, method, failure_code, razorpay_payment_id
-				)
-				VALUES ($1, $2, $3, $4, $5, 'FAILED', $6, $7, $8)
-				RETURNING id::text
-			`, merchantID, customerID, subscriptionUUID, amountFloat, currency, method, failureCode, razorpayPaymentID).Scan(&paymentUUID)
-			if err != nil {
-				log.Printf("[Webhook] Failed to insert payment: %v", err)
-				http.Error(w, `{"error": "failed to insert payment"}`, http.StatusInternalServerError)
-				return
+			// Check if a payment with this razorpay payment id or payment link ID already exists
+			var existingPayUUID string
+			_ = tx.QueryRow(ctx, "SELECT id::text FROM payments WHERE razorpay_payment_id = $1 OR (razorpay_payment_id = $2 AND $2 != '') LIMIT 1", razorpayPaymentID, plink.ID).Scan(&existingPayUUID)
+
+			if existingPayUUID != "" {
+				paymentUUID = existingPayUUID
+				_, err = tx.Exec(ctx, `
+					UPDATE payments
+					SET customer_id = $1,
+					    amount = $2,
+					    currency = $3,
+					    status = 'FAILED',
+					    method = $4,
+					    failure_code = $5,
+					    razorpay_payment_id = $6,
+					    updated_at = CURRENT_TIMESTAMP
+					WHERE id::text = $7
+				`, customerID, amountFloat, currency, method, failureCode, razorpayPaymentID, paymentUUID)
+				if err != nil {
+					log.Printf("[Webhook] Failed to update existing payment: %v", err)
+				}
+			} else {
+				err = tx.QueryRow(ctx, `
+					INSERT INTO payments (
+						merchant_id, customer_id, subscription_id, amount, currency, status, method, failure_code, razorpay_payment_id
+					)
+					VALUES ($1, $2, $3, $4, $5, 'FAILED', $6, $7, $8)
+					RETURNING id::text
+				`, merchantID, customerID, subscriptionUUID, amountFloat, currency, method, failureCode, razorpayPaymentID).Scan(&paymentUUID)
+				if err != nil {
+					log.Printf("[Webhook] Failed to insert payment: %v", err)
+					http.Error(w, `{"error": "failed to insert payment"}`, http.StatusInternalServerError)
+					return
+				}
 			}
 
-			// Insert outbox event for worker analysis
+			// 4. Ensure immediate Recovery Workflow creation so it appears in the dashboard instantly
+			var workflowUUID string
+			_ = tx.QueryRow(ctx, `
+				INSERT INTO recovery_workflows (payment_id, merchant_id, status, selected_action, recovery_probability, created_at, updated_at)
+				VALUES ($1, $2, 'SCHEDULED', 'DELAYED_RETRY', 0.65, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+				ON CONFLICT (payment_id) DO UPDATE SET status = 'SCHEDULED', updated_at = CURRENT_TIMESTAMP
+				RETURNING id::text
+			`, paymentUUID, merchantID).Scan(&workflowUUID)
+
+			// Insert outbox event for worker background analysis
 			analyzePayload := map[string]interface{}{
 				"payment_id": paymentUUID,
 			}
