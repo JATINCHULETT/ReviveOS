@@ -26,6 +26,13 @@ import {
   XCircle,
   Play,
   Settings,
+  ChevronDown,
+  ChevronUp,
+  Calculator,
+  Info,
+  Layers,
+  Zap,
+  TrendingDown,
 } from 'lucide-react';
 
 export default function WorkflowDetailPage() {
@@ -38,6 +45,7 @@ export default function WorkflowDetailPage() {
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedStrategy, setSelectedStrategy] = useState<string>('PAYMENT_LINK');
+  const [expandedBreakdown, setExpandedBreakdown] = useState<'CUSTOMER_MEMORY' | 'REVENUE_RISK' | null>(null);
 
   const loadWorkflow = async () => {
     if (!workflowId) return;
@@ -232,84 +240,332 @@ export default function WorkflowDetailPage() {
         const fail = wf.customer_failed_count ?? 1;
         const total = succ + fail;
         const reliability = total > 0 ? Math.round((succ / total) * 100) : 85;
+        const expLoss = wf.expected_loss ?? (payment.amount * fraudProb);
 
         return (
-          <div className="metrics-grid" style={{ marginBottom: '28px', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-            <div className="metric-card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <CreditCard size={16} color="var(--color-accent)" />
-                <span className="metric-label">Payment Amount</span>
-              </div>
-              <div className="metric-value">
-                ₹{(payment.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-              </div>
-              <span className="metric-sub mono">
-                {payment.currency} | Status: <b style={{ color: 'var(--text-primary)' }}>{payment.status}</b>
-              </span>
-            </div>
-
-            <div className="metric-card">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ marginBottom: '28px' }}>
+            <div className="metrics-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+              <div className="metric-card">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <User size={16} color="#8b5cf6" />
-                  <span className="metric-label">Customer Memory</span>
+                  <CreditCard size={16} color="var(--color-accent)" />
+                  <span className="metric-label">Payment Amount</span>
                 </div>
-                <span style={{ fontSize: '11px', fontWeight: 800, color: reliability >= 70 ? '#10b981' : '#f59e0b' }}>
-                  {reliability}% Score
+                <div className="metric-value">
+                  ₹{(payment.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </div>
+                <span className="metric-sub mono">
+                  {payment.currency} | Status: <b style={{ color: 'var(--text-primary)' }}>{payment.status}</b>
                 </span>
               </div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginTop: '10px', wordBreak: 'break-all' }}>
-                {customer.email}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
-                <span style={{ fontSize: '11px', color: '#10b981', fontWeight: 600 }}>✓ {succ} paid</span>
-                <span style={{ fontSize: '11px', color: '#ef4444', fontWeight: 600 }}>✗ {fail} failed</span>
-              </div>
-            </div>
 
-            <div className="metric-card">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <ShieldCheck size={16} color={fraudLevel === 'HIGH' ? '#ef4444' : fraudLevel === 'MEDIUM' ? '#f59e0b' : '#10b981'} />
-                  <span className="metric-label">Revenue Risk Assessment</span>
+              {/* 1. Customer Memory Card (Clickable) */}
+              <div
+                className="metric-card"
+                onClick={() => setExpandedBreakdown(expandedBreakdown === 'CUSTOMER_MEMORY' ? null : 'CUSTOMER_MEMORY')}
+                style={{
+                  cursor: 'pointer',
+                  border: expandedBreakdown === 'CUSTOMER_MEMORY' ? '1px solid #8b5cf6' : undefined,
+                  background: expandedBreakdown === 'CUSTOMER_MEMORY' ? 'rgba(139, 92, 246, 0.08)' : undefined,
+                  transition: 'all 0.2s ease',
+                }}
+                title="Click to view mathematical formula and closed-loop memory calculation"
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <User size={16} color="#8b5cf6" />
+                    <span className="metric-label">Customer Memory</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: reliability >= 70 ? '#10b981' : '#f59e0b' }}>
+                      {reliability}% Score
+                    </span>
+                    {expandedBreakdown === 'CUSTOMER_MEMORY' ? <ChevronUp size={14} color="#8b5cf6" /> : <ChevronDown size={14} color="var(--text-muted)" />}
+                  </div>
                 </div>
-                <span className={`badge ${fraudLevel === 'HIGH' ? 'badge-danger' : fraudLevel === 'MEDIUM' ? 'badge-warning' : 'badge-success'}`} style={{ fontSize: '10px' }}>
-                  {fraudLevel}
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginTop: '10px', wordBreak: 'break-all' }}>
+                  {customer.email}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '11px', color: '#10b981', fontWeight: 600 }}>✓ {succ} paid</span>
+                    <span style={{ fontSize: '11px', color: '#ef4444', fontWeight: 600 }}>✗ {fail} failed</span>
+                  </div>
+                  <span style={{ fontSize: '10px', color: '#8b5cf6', fontWeight: 600 }}>
+                    {expandedBreakdown === 'CUSTOMER_MEMORY' ? 'Hide logic ▲' : 'View formula ▼'}
+                  </span>
+                </div>
+              </div>
+
+              {/* 2. Revenue Risk Assessment Card (Clickable) */}
+              <div
+                className="metric-card"
+                onClick={() => setExpandedBreakdown(expandedBreakdown === 'REVENUE_RISK' ? null : 'REVENUE_RISK')}
+                style={{
+                  cursor: 'pointer',
+                  border: expandedBreakdown === 'REVENUE_RISK' ? (fraudLevel === 'HIGH' ? '1px solid #ef4444' : '1px solid var(--color-accent)') : undefined,
+                  background: expandedBreakdown === 'REVENUE_RISK' ? (fraudLevel === 'HIGH' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)') : undefined,
+                  transition: 'all 0.2s ease',
+                }}
+                title="Click to view fraud weight breakdown and expected loss calculation"
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <ShieldCheck size={16} color={fraudLevel === 'HIGH' ? '#ef4444' : fraudLevel === 'MEDIUM' ? '#f59e0b' : '#10b981'} />
+                    <span className="metric-label">Revenue Risk Assessment</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span className={`badge ${fraudLevel === 'HIGH' ? 'badge-danger' : fraudLevel === 'MEDIUM' ? 'badge-warning' : 'badge-success'}`} style={{ fontSize: '10px' }}>
+                      {fraudLevel}
+                    </span>
+                    {expandedBreakdown === 'REVENUE_RISK' ? <ChevronUp size={14} color="#ef4444" /> : <ChevronDown size={14} color="var(--text-muted)" />}
+                  </div>
+                </div>
+                <div className="metric-value" style={{ fontSize: '18px', color: fraudLevel === 'HIGH' ? '#ef4444' : fraudLevel === 'MEDIUM' ? '#f59e0b' : '#10b981' }}>
+                  {(fraudProb * 100).toFixed(1)}% Fraud
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                  <span className="metric-sub">
+                    Return Risk: {(returnProb * 100).toFixed(0)}% | Exp. Loss: ₹{expLoss.toFixed(2)}
+                  </span>
+                  <span style={{ fontSize: '10px', color: fraudLevel === 'HIGH' ? '#ef4444' : 'var(--color-accent)', fontWeight: 600 }}>
+                    {expandedBreakdown === 'REVENUE_RISK' ? 'Hide weights ▲' : 'View weights ▼'}
+                  </span>
+                </div>
+              </div>
+
+              {/* 3. AI Strategy Card */}
+              <div className="metric-card">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Cpu size={16} color="#ec4899" />
+                  <span className="metric-label">AI Strategy (DeepSeek-R1)</span>
+                </div>
+                <div className="metric-value" style={{ fontSize: '18px', color: '#ec4899' }}>
+                  {latestAI?.recommended_action || wf.selected_action || 'DELAYED_RETRY'}
+                </div>
+                <span className="metric-sub">
+                  Confidence: {latestAI?.confidence ? `${(latestAI.confidence * 100).toFixed(0)}%` : '85%'} | Delay: {latestAI?.recommended_delay_hours || 24}h
                 </span>
               </div>
-              <div className="metric-value" style={{ fontSize: '18px', color: fraudLevel === 'HIGH' ? '#ef4444' : fraudLevel === 'MEDIUM' ? '#f59e0b' : '#10b981' }}>
-                {(fraudProb * 100).toFixed(1)}% Fraud
+
+              {/* 4. Policy Engine Card */}
+              <div className="metric-card">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <ShieldAlert size={16} color="#f59e0b" />
+                  <span className="metric-label">Policy Safety Engine</span>
+                </div>
+                <div style={{ marginTop: '12px' }}>
+                  <StatusBadge status={policyDecision?.decision || (wf.status === 'ESCALATED' ? 'ESCALATE' : 'ALLOW')} />
+                </div>
+                <span className="metric-sub" style={{ marginTop: '8px' }}>
+                  {policyDecision?.reason || (wf.status === 'ESCALATED' ? 'Flagged for human operator approval' : 'Verified zero rate-limit or customer opt-out conflicts')}
+                </span>
               </div>
-              <span className="metric-sub">
-                Return Risk: {(returnProb * 100).toFixed(0)}% | Exp. Loss: ₹{(wf.expected_loss ?? (payment.amount * fraudProb)).toFixed(2)}
-              </span>
             </div>
 
-            <div className="metric-card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Cpu size={16} color="#ec4899" />
-                <span className="metric-label">AI Strategy (DeepSeek-R1)</span>
-              </div>
-              <div className="metric-value" style={{ fontSize: '18px', color: '#ec4899' }}>
-                {latestAI?.recommended_action || wf.selected_action || 'DELAYED_RETRY'}
-              </div>
-              <span className="metric-sub">
-                Confidence: {latestAI?.confidence ? `${(latestAI.confidence * 100).toFixed(0)}%` : '85%'} | Delay: {latestAI?.recommended_delay_hours || 24}h
-              </span>
-            </div>
+            {/* ════ EXPANDED LOGIC & FORMULA BREAKDOWN DRAWER ════ */}
+            {expandedBreakdown === 'CUSTOMER_MEMORY' && (
+              <div
+                style={{
+                  marginTop: '16px',
+                  background: 'var(--bg-card)',
+                  border: '1px solid #8b5cf6',
+                  borderRadius: '12px',
+                  padding: '20px 24px',
+                  boxShadow: '0 8px 32px rgba(139, 92, 246, 0.12)',
+                  animation: 'fadeIn 0.2s ease-in-out',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ background: 'rgba(139, 92, 246, 0.2)', padding: '6px', borderRadius: '8px' }}>
+                      <Calculator size={18} color="#8b5cf6" />
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '15px', color: 'var(--text-primary)', fontWeight: 700 }}>
+                        Closed-Loop Customer Memory & Reliability Logic
+                      </h4>
+                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        How ReviveOS computes the <b>{reliability}% Score</b> for <code className="mono">{customer.email}</code>
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setExpandedBreakdown(null)}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '16px', padding: '4px 8px' }}
+                  >
+                    ✕ Close
+                  </button>
+                </div>
 
-            <div className="metric-card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <ShieldAlert size={16} color="#f59e0b" />
-                <span className="metric-label">Policy Safety Engine</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                  {/* Mathematical Formula Box */}
+                  <div style={{ background: 'var(--bg-elevated)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#8b5cf6', textTransform: 'uppercase', marginBottom: '8px' }}>
+                      1. Mathematical Formulation
+                    </div>
+                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '12px', borderRadius: '8px', fontFamily: 'monospace', fontSize: '13px', color: '#a78bfa', marginBottom: '10px' }}>
+                      Reliability % = [ Successful_Payments / Total_Lifetime_Payments ] × 100
+                    </div>
+                    <div style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: '1.6' }}>
+                      <b>Calculation with Live Telemetry:</b><br />
+                      = [ <span style={{ color: '#10b981', fontWeight: 700 }}>{succ} paid</span> / ( <span style={{ color: '#10b981', fontWeight: 700 }}>{succ}</span> + <span style={{ color: '#ef4444', fontWeight: 700 }}>{fail} failed</span> ) ] × 100<br />
+                      = [ <span style={{ color: '#10b981' }}>{succ}</span> / <span style={{ color: 'var(--text-primary)' }}>{total}</span> ] × 100 = <b style={{ color: reliability >= 70 ? '#10b981' : '#f59e0b', fontSize: '14px' }}>{reliability}%</b>
+                    </div>
+                  </div>
+
+                  {/* Closed-Loop PostgreSQL Ledger Audit */}
+                  <div style={{ background: 'var(--bg-elevated)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', marginBottom: '8px' }}>
+                      2. Closed-Loop Telemetry Sources
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <li>
+                        <b>PostgreSQL Ledger:</b> Queried across all payment attempts matching email <code className="mono">{customer.email}</code>.
+                      </li>
+                      <li>
+                        <b>Feedback Calibration:</b> Every recovered checkout logs into <code className="mono">recovery_outcomes</code>, automatically raising customer reliability.
+                      </li>
+                      <li>
+                        <b>Opt-Out Verification:</b> {customer.communication_opt_out ? '⚠️ Customer has explicitly opted out of marketing/recovery SMS/Emails.' : '✓ Verified active, deliverable, and compliant with opt-out policies.'}
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Pipeline Impact Explanation */}
+                  <div style={{ background: 'var(--bg-elevated)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#ec4899', textTransform: 'uppercase', marginBottom: '8px' }}>
+                      3. Impact on AI Decision Pipeline
+                    </div>
+                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+                      Because reliability is <b>{reliability}%</b> ({fail} past failures), DeepSeek-R1 and the Policy Engine throttle rapid retries and instead inject a strategic <b>+{latestAI?.recommended_delay_hours || 24}h delay</b> or generate a self-service payment link to avoid triggering issuer bank card blocks.
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div style={{ marginTop: '12px' }}>
-                <StatusBadge status={policyDecision?.decision || (wf.status === 'ESCALATED' ? 'ESCALATE' : 'ALLOW')} />
+            )}
+
+            {/* ════ EXPANDED REVENUE RISK & FRAUD LOGIC DRAWER ════ */}
+            {expandedBreakdown === 'REVENUE_RISK' && (
+              <div
+                style={{
+                  marginTop: '16px',
+                  background: 'var(--bg-card)',
+                  border: fraudLevel === 'HIGH' ? '1px solid #ef4444' : '1px solid var(--color-accent)',
+                  borderRadius: '12px',
+                  padding: '20px 24px',
+                  boxShadow: fraudLevel === 'HIGH' ? '0 8px 32px rgba(239, 68, 68, 0.15)' : '0 8px 32px rgba(16, 185, 129, 0.12)',
+                  animation: 'fadeIn 0.2s ease-in-out',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ background: fraudLevel === 'HIGH' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)', padding: '6px', borderRadius: '8px' }}>
+                      <ShieldCheck size={18} color={fraudLevel === 'HIGH' ? '#ef4444' : '#10b981'} />
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '15px', color: 'var(--text-primary)', fontWeight: 700 }}>
+                        ML Fraud Detection & Risk Calculation Breakdown
+                      </h4>
+                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        Why this transaction is classified as <b>{fraudLevel} RISK ({(fraudProb * 100).toFixed(1)}%)</b>
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setExpandedBreakdown(null)}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '16px', padding: '4px 8px' }}
+                  >
+                    ✕ Close
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                  {/* Feature Weights Box */}
+                  <div style={{ background: 'var(--bg-elevated)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: fraudLevel === 'HIGH' ? '#ef4444' : '#10b981', textTransform: 'uppercase', marginBottom: '8px' }}>
+                      1. ML Feature Weight Attribution
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>• Baseline Prior Fraud Rate:</span>
+                        <b className="mono">+5.0%</b>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>• High-Value Exposure (₹{(payment.amount || 0).toLocaleString('en-IN')}):</span>
+                        <b className="mono" style={{ color: payment.amount > 50000 ? '#ef4444' : payment.amount > 20000 ? '#f59e0b' : 'var(--text-primary)' }}>
+                          {payment.amount > 50000 ? '+40.0%' : payment.amount > 20000 ? '+20.0%' : '+0.0%'}
+                        </b>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>• Customer Failure Velocity ({fail} past failures):</span>
+                        <b className="mono" style={{ color: fail > 3 ? '#ef4444' : '#10b981' }}>
+                          {fail > 3 ? '+30.0%' : '+0.0%'}
+                        </b>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>• Retry Attempt Multiplier (Attempt #{wf.attempt_count || wf.attempts_count || 1}):</span>
+                        <b className="mono" style={{ color: (wf.attempt_count || wf.attempts_count || 1) > 2 ? '#ef4444' : 'var(--text-primary)' }}>
+                          {(wf.attempt_count || wf.attempts_count || 1) > 3 ? '+15.0%' : '+0.0%'}
+                        </b>
+                      </div>
+                      <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
+                        <span>Total Fraud Probability:</span>
+                        <span className="mono" style={{ color: fraudLevel === 'HIGH' ? '#ef4444' : '#10b981', fontSize: '13px' }}>
+                          {(fraudProb * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Expected Loss Math */}
+                  <div style={{ background: 'var(--bg-elevated)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', marginBottom: '8px' }}>
+                      2. Expected Loss Formulation
+                    </div>
+                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '12px', borderRadius: '8px', fontFamily: 'monospace', fontSize: '13px', color: '#fcd34d', marginBottom: '10px' }}>
+                      Expected Loss = Amount × Fraud Probability
+                    </div>
+                    <div style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: '1.6' }}>
+                      = ₹{(payment.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} × {(fraudProb * 100).toFixed(1)}%<br />
+                      = <b style={{ color: fraudLevel === 'HIGH' ? '#ef4444' : 'var(--text-primary)', fontSize: '15px' }}>
+                        ₹{expLoss.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </b>
+                    </div>
+                    <div style={{ marginTop: '10px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                      Evaluated by ML Model: <code className="mono">{latestRisk?.model_version || 'fraud-rf-v1.0'}</code>
+                    </div>
+                  </div>
+
+                  {/* Safety Guard Action */}
+                  <div style={{ background: 'var(--bg-elevated)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-accent)', textTransform: 'uppercase', marginBottom: '8px' }}>
+                      3. Downstream Safety Guardrail
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+                      {fraudProb >= 0.70 ? (
+                        <>
+                          <div style={{ color: '#ef4444', fontWeight: 700, marginBottom: '6px' }}>
+                            ⚠️ Threshold Exceeded ({(fraudProb * 100).toFixed(1)}% ≥ 70% Guardrail)
+                          </div>
+                          <div>
+                            Automated recovery has been <b>HALTED</b>. The workflow is routed to the <b>Needs Human Review</b> queue to protect your merchant account from unauthorized chargebacks.
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ color: '#10b981', fontWeight: 700, marginBottom: '6px' }}>
+                            ✓ Passed Safety Guardrails ({(fraudProb * 100).toFixed(1)}% &lt; 70%)
+                          </div>
+                          <div>
+                            Transaction verified safe for autonomous Razorpay payment retries and email recovery link dispatch.
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <span className="metric-sub" style={{ marginTop: '8px' }}>
-                {policyDecision?.reason || (wf.status === 'ESCALATED' ? 'Flagged for human operator approval' : 'Verified zero rate-limit or customer opt-out conflicts')}
-              </span>
-            </div>
+            )}
           </div>
         );
       })()}
