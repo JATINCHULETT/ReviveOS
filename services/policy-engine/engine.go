@@ -97,6 +97,22 @@ func (e *Engine) Evaluate(ctx context.Context, merchantID string, event schemas.
 				}, nil
 			}
 		}
+
+		// Check Fraud Risk Score from recovery_workflows
+		var fraudProb float64
+		err = e.db.QueryRow(ctx, `
+			SELECT COALESCE(fraud_probability, 0)::float8
+			FROM recovery_workflows
+			WHERE payment_id::text = $1
+			ORDER BY created_at DESC LIMIT 1
+		`, event.PaymentID).Scan(&fraudProb)
+		if err == nil && fraudProb >= 0.70 {
+			log.Printf("Policy: High fraud risk (%.2f). Escalating workflow to human review.", fraudProb)
+			return PolicyDecision{
+				Decision: DecisionEscalate,
+				Reason:   fmt.Sprintf("High fraud risk score (%.1f%%) exceeds safety threshold. Halting automated recovery for human verification.", fraudProb*100),
+			}, nil
+		}
 	}
 
 	// 3. Retry Limit Check

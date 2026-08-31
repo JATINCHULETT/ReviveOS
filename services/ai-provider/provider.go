@@ -33,6 +33,9 @@ type AIContext struct {
 	DeterministicClass types.FailureCategory       `json:"deterministic_class"`
 	StatisticalProb    float64                     `json:"statistical_probability"`
 	EmpiricalStats     map[string]float64          `json:"empirical_stats"`
+	FraudRiskScore     float64                     `json:"fraud_risk_score,omitempty"`
+	FraudRiskLevel     string                      `json:"fraud_risk_level,omitempty"`
+	ReturnRiskScore    float64                     `json:"return_risk_score,omitempty"`
 }
 
 // Provider defines the interface for interacting with any AI model provider.

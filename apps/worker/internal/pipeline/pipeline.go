@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/reviveos/packages/recovery"
 	"github.com/reviveos/packages/types"
+	"github.com/reviveos/risk"
 	"github.com/reviveos/schemas"
 	aiprovider "github.com/reviveos/services/ai-provider"
 )
@@ -26,6 +27,7 @@ type AnalysisResult struct {
 	AIDecisionID     string                       `json:"ai_decision_id"`
 	AIRecommendation *aiprovider.AIRecommendation `json:"ai_recommendation"`
 	FeaturesUsed     map[string]interface{}       `json:"features_used"`
+	RiskAssessment   *risk.RiskAnalysisResponse   `json:"risk_assessment,omitempty"`
 }
 
 type Pipeline struct {
@@ -33,6 +35,7 @@ type Pipeline struct {
 	classifier  *types.Classifier
 	probModel   *recovery.ProbabilityModel
 	aiProvider  aiprovider.Provider
+	riskClient  *risk.Client
 }
 
 func NewPipeline(pool *pgxpool.Pool) *Pipeline {
@@ -41,6 +44,7 @@ func NewPipeline(pool *pgxpool.Pool) *Pipeline {
 		classifier: types.NewClassifier(),
 		probModel:  recovery.NewProbabilityModel(),
 		aiProvider: aiprovider.NewAIProvider(),
+		riskClient: risk.NewClient(),
 	}
 }
 
@@ -50,6 +54,7 @@ func NewPipelineWithAI(pool *pgxpool.Pool, ai aiprovider.Provider) *Pipeline {
 		classifier: types.NewClassifier(),
 		probModel:  recovery.NewProbabilityModel(),
 		aiProvider: ai,
+		riskClient: risk.NewClient(),
 	}
 }
 
@@ -195,11 +200,67 @@ func (p *Pipeline) AnalyzePayment(ctx context.Context, paymentIDOrExternal strin
 		CustomerHistory: history,
 	}
 
+	// 6.5. REVENUE RISK ASSESSMENT STAGE (Fraud Detection & Return Risk Intelligence)
+	riskReq := risk.RiskAnalysisRequest{
+		EventType:            "PAYMENT_FAILED",
+		PaymentID:            paymentID,
+		MerchantID:           merchantID,
+		CustomerID:           customerID,
+		CustomerEmail:        customerEmail,
+		Amount:               amount,
+		Currency:             currency,
+		FailureCode:          failureCode,
+		AttemptNumber:        attemptNumber,
+		CustomerFailedCount:  history.FailedPayments,
+		CustomerSuccessCount: history.SuccessfulPayments,
+		Velocity1h:           1,
+	}
+
+	riskResp, riskErr := p.riskClient.AnalyzeRisk(ctx, riskReq)
+	if riskErr != nil || riskResp == nil {
+		log.Printf("[Pipeline] Warning: risk analysis failed (%v), using default safe risk scores", riskErr)
+	}
+
+	if riskResp != nil {
+		var returnProb float64 = 0.0
+		var returnLevel string = "LOW"
+		if riskResp.ReturnRisk != nil {
+			returnProb = riskResp.ReturnRisk.Probability
+			returnLevel = riskResp.ReturnRisk.RiskLevel
+		}
+		rawPayload, _ := json.Marshal(riskResp)
+
+		_, _ = p.pool.Exec(ctx, `
+			INSERT INTO risk_assessments (
+				payment_id, workflow_id, merchant_id, event_type,
+				fraud_probability, fraud_risk_level, return_probability, return_risk_level,
+				overall_risk_level, expected_loss, recommended_action, reason, model_version, raw_payload, created_at
+			)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, CURRENT_TIMESTAMP)
+		`, paymentID, workflowID, merchantID, "PAYMENT_FAILED",
+			riskResp.Fraud.Probability, riskResp.Fraud.RiskLevel, returnProb, returnLevel,
+			riskResp.OverallRisk, riskResp.ExpectedLoss, riskResp.RecommendedAction, riskResp.Reason, riskResp.Fraud.ModelVersion, rawPayload)
+
+		// Update workflow with risk intelligence
+		_, _ = p.pool.Exec(ctx, `
+			UPDATE recovery_workflows 
+			SET fraud_probability = $1, return_probability = $2, overall_risk = $3, expected_loss = $4, risk_action = $5, updated_at = CURRENT_TIMESTAMP
+			WHERE id::text = $6
+		`, riskResp.Fraud.Probability, returnProb, riskResp.OverallRisk, riskResp.ExpectedLoss, riskResp.RecommendedAction, workflowID)
+	}
+
 	// 7. Calculate Statistical Recovery Probability
 	probability := p.probModel.Predict(event, category)
 	modelVersion := "logistic-v1"
 
 	// 8. Prepare Features Used JSON
+	fraudProbVal := 0.05
+	fraudLevelVal := "LOW"
+	if riskResp != nil {
+		fraudProbVal = riskResp.Fraud.Probability
+		fraudLevelVal = riskResp.Fraud.RiskLevel
+	}
+
 	features := map[string]interface{}{
 		"amount":            amount,
 		"currency":          currency,
@@ -208,6 +269,8 @@ func (p *Pipeline) AnalyzePayment(ctx context.Context, paymentIDOrExternal strin
 		"attempt_number":    attemptNumber,
 		"customer_success":  history.SuccessfulPayments,
 		"customer_failures": history.FailedPayments,
+		"fraud_risk_score":  fraudProbVal,
+		"fraud_risk_level":  fraudLevelVal,
 	}
 	featuresJSON, _ := json.Marshal(features)
 
@@ -263,6 +326,8 @@ func (p *Pipeline) AnalyzePayment(ctx context.Context, paymentIDOrExternal strin
 		FailureEvent:       event,
 		DeterministicClass: category,
 		StatisticalProb:    probability,
+		FraudRiskScore:     fraudProbVal,
+		FraudRiskLevel:     fraudLevelVal,
 		EmpiricalStats: map[string]float64{
 			"category_success_rate": categorySuccessRate,
 			"customer_success_rate": func() float64 {
@@ -272,6 +337,7 @@ func (p *Pipeline) AnalyzePayment(ctx context.Context, paymentIDOrExternal strin
 				}
 				return 0.5
 			}(),
+			"fraud_risk_probability": fraudProbVal,
 		},
 	}
 
@@ -360,5 +426,6 @@ func (p *Pipeline) AnalyzePayment(ctx context.Context, paymentIDOrExternal strin
 		AIDecisionID:     aiDecisionID,
 		AIRecommendation: aiRec,
 		FeaturesUsed:     features,
+		RiskAssessment:   riskResp,
 	}, nil
 }

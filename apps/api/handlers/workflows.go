@@ -49,6 +49,30 @@ type WorkflowSummary struct {
 	// Customer lifetime memory & learning stats
 	CustomerSuccessCount int `json:"customer_success_count"`
 	CustomerFailedCount  int `json:"customer_failed_count"`
+
+	// Revenue Risk Intelligence
+	FraudProbability  float64 `json:"fraud_probability"`
+	ReturnProbability float64 `json:"return_probability"`
+	OverallRisk       string  `json:"overall_risk"`
+	ExpectedLoss      float64 `json:"expected_loss"`
+	RiskAction        string  `json:"risk_action"`
+}
+
+type RiskAssessmentItem struct {
+	ID                string    `json:"id"`
+	PaymentID         string    `json:"payment_id"`
+	WorkflowID        string    `json:"workflow_id"`
+	EventType         string    `json:"event_type"`
+	FraudProbability  float64   `json:"fraud_probability"`
+	FraudRiskLevel    string    `json:"fraud_risk_level"`
+	ReturnProbability float64   `json:"return_probability"`
+	ReturnRiskLevel   string    `json:"return_risk_level"`
+	OverallRiskLevel  string    `json:"overall_risk_level"`
+	ExpectedLoss      float64   `json:"expected_loss"`
+	RecommendedAction string    `json:"recommended_action"`
+	Reason            string    `json:"reason"`
+	ModelVersion      string    `json:"model_version"`
+	CreatedAt         time.Time `json:"created_at"`
 }
 
 type AIDecisionItem struct {
@@ -120,6 +144,7 @@ type WorkflowDetailResponse struct {
 	RecoveryActions  []RecoveryActionItem  `json:"recovery_actions"`
 	RecoveryOutcomes []RecoveryOutcomeItem `json:"recovery_outcomes"`
 	AuditEvents      []AuditEventItem      `json:"audit_events"`
+	RiskAssessments  []RiskAssessmentItem  `json:"risk_assessments"`
 }
 
 type WorkflowsListResponse struct {
@@ -273,7 +298,12 @@ func listWorkflows(ctx context.Context, pool *pgxpool.Pool, w http.ResponseWrite
 			COALESCE(c.phone, ''),
 			c.communication_opt_out,
 			COALESCE((SELECT COUNT(*) FROM recovery_actions WHERE workflow_id = rw.id), 0),
-			COALESCE((SELECT recovered FROM recovery_outcomes WHERE payment_id = p.id ORDER BY created_at DESC LIMIT 1), false)
+			COALESCE((SELECT recovered FROM recovery_outcomes WHERE payment_id = p.id ORDER BY created_at DESC LIMIT 1), false),
+			COALESCE(rw.fraud_probability, 0)::float8,
+			COALESCE(rw.return_probability, 0)::float8,
+			COALESCE(rw.overall_risk, 'LOW'),
+			COALESCE(rw.expected_loss, 0)::float8,
+			COALESCE(rw.risk_action, 'ALLOW')
 		FROM recovery_workflows rw
 		JOIN payments p ON rw.payment_id = p.id
 		JOIN customers c ON p.customer_id = c.id
@@ -316,6 +346,11 @@ func listWorkflows(ctx context.Context, pool *pgxpool.Pool, w http.ResponseWrite
 			&item.CommunicationOptOut,
 			&item.AttemptsCount,
 			&item.IsRecovered,
+			&item.FraudProbability,
+			&item.ReturnProbability,
+			&item.OverallRisk,
+			&item.ExpectedLoss,
+			&item.RiskAction,
 		)
 		if err != nil {
 			log.Printf("ERROR: failed to scan workflow row: %v", err)
@@ -370,7 +405,12 @@ func getWorkflowByID(ctx context.Context, pool *pgxpool.Pool, w http.ResponseWri
 			COALESCE((SELECT COUNT(*) FROM recovery_actions WHERE workflow_id = rw.id), 0),
 			COALESCE((SELECT recovered FROM recovery_outcomes WHERE payment_id = p.id ORDER BY created_at DESC LIMIT 1), false),
 			COALESCE((SELECT COUNT(*) FROM payments p2 WHERE (p2.customer_id = c.id OR (c.email != '' AND p2.customer_id IN (SELECT id FROM customers WHERE email = c.email))) AND p2.status IN ('CAPTURED', 'RECOVERED', 'SUCCESS')), 0),
-			COALESCE((SELECT COUNT(*) FROM payments p2 WHERE (p2.customer_id = c.id OR (c.email != '' AND p2.customer_id IN (SELECT id FROM customers WHERE email = c.email))) AND p2.status = 'FAILED'), 0)
+			COALESCE((SELECT COUNT(*) FROM payments p2 WHERE (p2.customer_id = c.id OR (c.email != '' AND p2.customer_id IN (SELECT id FROM customers WHERE email = c.email))) AND p2.status = 'FAILED'), 0),
+			COALESCE(rw.fraud_probability, 0)::float8,
+			COALESCE(rw.return_probability, 0)::float8,
+			COALESCE(rw.overall_risk, 'LOW'),
+			COALESCE(rw.expected_loss, 0)::float8,
+			COALESCE(rw.risk_action, 'ALLOW')
 		FROM recovery_workflows rw
 		JOIN payments p ON rw.payment_id = p.id
 		JOIN customers c ON p.customer_id = c.id
@@ -405,6 +445,11 @@ func getWorkflowByID(ctx context.Context, pool *pgxpool.Pool, w http.ResponseWri
 		&item.IsRecovered,
 		&item.CustomerSuccessCount,
 		&item.CustomerFailedCount,
+		&item.FraudProbability,
+		&item.ReturnProbability,
+		&item.OverallRisk,
+		&item.ExpectedLoss,
+		&item.RiskAction,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -614,6 +659,53 @@ func getWorkflowByID(ctx context.Context, pool *pgxpool.Pool, w http.ResponseWri
 		}
 	}
 
+	// 6. Fetch Risk Assessments
+	riskAssessments := make([]RiskAssessmentItem, 0)
+	riskRows, err := pool.Query(ctx, `
+		SELECT 
+			id::text,
+			payment_id::text,
+			COALESCE(workflow_id::text, ''),
+			event_type,
+			fraud_probability::float8,
+			fraud_risk_level,
+			COALESCE(return_probability, 0)::float8,
+			COALESCE(return_risk_level, 'LOW'),
+			overall_risk_level,
+			expected_loss::float8,
+			recommended_action,
+			COALESCE(reason, ''),
+			COALESCE(model_version, 'fraud-rf-v1.0'),
+			created_at
+		FROM risk_assessments
+		WHERE workflow_id::text = $1 OR payment_id::text = $2
+		ORDER BY created_at ASC
+	`, actualWfID, item.PaymentID)
+	if err == nil {
+		defer riskRows.Close()
+		for riskRows.Next() {
+			var ra RiskAssessmentItem
+			if err := riskRows.Scan(
+				&ra.ID,
+				&ra.PaymentID,
+				&ra.WorkflowID,
+				&ra.EventType,
+				&ra.FraudProbability,
+				&ra.FraudRiskLevel,
+				&ra.ReturnProbability,
+				&ra.ReturnRiskLevel,
+				&ra.OverallRiskLevel,
+				&ra.ExpectedLoss,
+				&ra.RecommendedAction,
+				&ra.Reason,
+				&ra.ModelVersion,
+				&ra.CreatedAt,
+			); err == nil {
+				riskAssessments = append(riskAssessments, ra)
+			}
+		}
+	}
+
 	resp := WorkflowDetailResponse{
 		Workflow:         item,
 		AIDecisions:      aiDecisions,
@@ -621,6 +713,7 @@ func getWorkflowByID(ctx context.Context, pool *pgxpool.Pool, w http.ResponseWri
 		RecoveryActions:  recoveryActions,
 		RecoveryOutcomes: recoveryOutcomes,
 		AuditEvents:      auditEvents,
+		RiskAssessments:  riskAssessments,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -701,6 +794,11 @@ func getInterventions(ctx context.Context, pool *pgxpool.Pool, w http.ResponseWr
 			COALESCE((SELECT recovered FROM recovery_outcomes WHERE payment_id = p.id ORDER BY created_at DESC LIMIT 1), false),
 			COALESCE((SELECT COUNT(*) FROM payments p2 WHERE p2.customer_id = c.id AND p2.status IN ('CAPTURED', 'RECOVERED', 'SUCCESS')), 0),
 			COALESCE((SELECT COUNT(*) FROM payments p2 WHERE p2.customer_id = c.id AND p2.status = 'FAILED'), 0),
+			COALESCE(rw.fraud_probability, 0)::float8,
+			COALESCE(rw.return_probability, 0)::float8,
+			COALESCE(rw.overall_risk, 'LOW'),
+			COALESCE(rw.expected_loss, 0)::float8,
+			COALESCE(rw.risk_action, 'ALLOW'),
 			COALESCE((SELECT diagnosis FROM ai_decisions WHERE workflow_id = rw.id ORDER BY created_at DESC LIMIT 1), ''),
 			COALESCE((SELECT confidence FROM ai_decisions WHERE workflow_id = rw.id ORDER BY created_at DESC LIMIT 1), 0.75)::float8,
 			COALESCE((SELECT metadata->>'reason' FROM audit_events WHERE workflow_id = rw.id AND action = 'POLICY_EVALUATED_ESCALATE' ORDER BY timestamp DESC LIMIT 1), 'Flagged for human operator review')
@@ -747,6 +845,11 @@ func getInterventions(ctx context.Context, pool *pgxpool.Pool, w http.ResponseWr
 			&item.IsRecovered,
 			&item.CustomerSuccessCount,
 			&item.CustomerFailedCount,
+			&item.FraudProbability,
+			&item.ReturnProbability,
+			&item.OverallRisk,
+			&item.ExpectedLoss,
+			&item.RiskAction,
 			&item.LatestDiagnosis,
 			&item.LatestConfidence,
 			&item.EscalationReason,
