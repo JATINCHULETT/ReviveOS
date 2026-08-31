@@ -30,6 +30,8 @@ export interface WorkflowSummary {
   customer_id?: string;
   customer_email?: string;
   customer_phone?: string;
+  customer_success_count?: number;
+  customer_failed_count?: number;
   failure_code: string;
   failure_reason?: string;
   status: string;
@@ -72,6 +74,8 @@ export interface WorkflowDetail {
     customer_id?: string;
     customer_email?: string;
     customer_phone?: string;
+    customer_success_count?: number;
+    customer_failed_count?: number;
     communication_opt_out?: boolean;
     scheduled_at?: string;
   };
@@ -109,6 +113,7 @@ export interface WorkflowDetail {
     provider?: string;
     model?: string;
     recommended_action?: string;
+    recommended_delay_hours?: number;
     confidence?: number;
     reasoning?: string;
     latency_ms?: number;
@@ -198,4 +203,38 @@ export interface SystemQueuesResponse {
   queues: QueueStats[];
   servers: ServerInfo[];
   timestamp: string;
+}
+
+export interface InterventionItem {
+  id: string;
+  payment_id: string;
+  merchant_id?: string;
+  status: string;
+  recovery_probability: number;
+  selected_action: string;
+  scheduled_at?: string;
+  created_at: string;
+  updated_at: string;
+  amount: number;
+  currency: string;
+  payment_status: string;
+  payment_method: string;
+  failure_code: string;
+  razorpay_payment_id?: string;
+  customer_id: string;
+  customer_email: string;
+  customer_phone?: string;
+  communication_opt_out: boolean;
+  attempts_count: number;
+  is_recovered: boolean;
+  customer_success_count: number;
+  customer_failed_count: number;
+  latest_diagnosis: string;
+  latest_confidence: number;
+  escalation_reason: string;
+}
+
+export interface InterventionsResponse {
+  data: InterventionItem[];
+  total: number;
 }

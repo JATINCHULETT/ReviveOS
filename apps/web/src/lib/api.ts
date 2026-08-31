@@ -160,3 +160,30 @@ export async function createSandboxPaymentLink(data: {
     body: JSON.stringify(data),
   });
 }
+
+export async function getInterventions(merchantId?: string): Promise<{ data: any[]; total: number }> {
+  const qs = merchantId ? `?merchant_id=${encodeURIComponent(merchantId)}` : '';
+  return fetchJSON(`/workflows/interventions${qs}`);
+}
+
+export async function approveWorkflow(id: string, data?: { action?: string; notes?: string }): Promise<any> {
+  return fetchJSON(`/workflows/${id}/approve`, {
+    method: 'POST',
+    body: JSON.stringify(data || {}),
+  });
+}
+
+export async function rejectWorkflow(id: string, data?: { reason?: string; notes?: string }): Promise<any> {
+  return fetchJSON(`/workflows/${id}/reject`, {
+    method: 'POST',
+    body: JSON.stringify(data || {}),
+  });
+}
+
+export async function overrideWorkflow(id: string, data: { action: string; delay_hours?: number; notes?: string }): Promise<any> {
+  return fetchJSON(`/workflows/${id}/override`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
