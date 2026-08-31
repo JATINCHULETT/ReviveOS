@@ -268,14 +268,21 @@ func MerchantDashboardHandler(pool *pgxpool.Pool) http.HandlerFunc {
 				COALESCE(c.email, 'N/A'),
 				COALESCE(c.phone, 'N/A'),
 				c.communication_opt_out,
-				(SELECT COUNT(*) FROM payments p WHERE p.customer_id = c.id) as tot_pmts,
-				(SELECT COUNT(*) FROM payments p WHERE p.customer_id = c.id AND p.status = 'FAILED') as failed_pmts,
-				(SELECT COUNT(*) FROM payments p JOIN recovery_outcomes ro ON ro.payment_id = p.id WHERE p.customer_id = c.id AND ro.recovered = true) as rec_pmts,
-				COALESCE((SELECT p.status FROM payments p WHERE p.customer_id = c.id ORDER BY p.created_at DESC LIMIT 1), 'NEW') as last_status,
-				COALESCE((SELECT rw.selected_action FROM payments p JOIN recovery_workflows rw ON rw.payment_id = p.id WHERE p.customer_id = c.id ORDER BY p.created_at DESC LIMIT 1), 'N/A') as last_action,
+				(SELECT COUNT(*) FROM payments p WHERE p.customer_id = c.id OR (c.email != '' AND p.customer_id IN (SELECT id FROM customers WHERE email = c.email))) as tot_pmts,
+				(SELECT COUNT(*) FROM payments p WHERE (p.customer_id = c.id OR (c.email != '' AND p.customer_id IN (SELECT id FROM customers WHERE email = c.email))) AND p.status = 'FAILED') as failed_pmts,
+				(SELECT COUNT(*) FROM payments p JOIN recovery_outcomes ro ON ro.payment_id = p.id WHERE (p.customer_id = c.id OR (c.email != '' AND p.customer_id IN (SELECT id FROM customers WHERE email = c.email))) AND ro.recovered = true) as rec_pmts,
+				COALESCE(
+					(SELECT rw.status FROM payments p JOIN recovery_workflows rw ON rw.payment_id = p.id WHERE p.customer_id = c.id OR (c.email != '' AND p.customer_id IN (SELECT id FROM customers WHERE email = c.email)) ORDER BY rw.created_at DESC LIMIT 1),
+					(SELECT p.status FROM payments p WHERE p.customer_id = c.id ORDER BY p.created_at DESC LIMIT 1),
+					'NEW'
+				) as last_status,
+				COALESCE(
+					(SELECT rw.selected_action FROM payments p JOIN recovery_workflows rw ON rw.payment_id = p.id WHERE p.customer_id = c.id OR (c.email != '' AND p.customer_id IN (SELECT id FROM customers WHERE email = c.email)) ORDER BY rw.created_at DESC LIMIT 1),
+					'N/A'
+				) as last_action,
 				c.updated_at
 			FROM customers c
-			WHERE c.merchant_id::text = $1
+			WHERE c.merchant_id::text = $1 OR c.merchant_id IS NULL
 			ORDER BY c.created_at DESC
 			LIMIT 50
 		`
@@ -300,14 +307,14 @@ func MerchantDashboardHandler(pool *pgxpool.Pool) http.HandlerFunc {
 				COALESCE(COUNT(CASE WHEN rw.status NOT IN ('RECOVERED', 'FAILED', 'HALTED') THEN 1 END), 0)
 			FROM payments p
 			LEFT JOIN recovery_workflows rw ON rw.payment_id = p.id
-			WHERE p.merchant_id::text = $1 AND p.status = 'FAILED'
+			WHERE (p.merchant_id::text = $1 OR p.merchant_id IS NULL) AND p.status = 'FAILED'
 		`, merchantID).Scan(&data.Metrics.TotalAtRiskRevenue, &data.Metrics.PendingRecoveries)
 
 		_ = pool.QueryRow(ctx, `
 			SELECT COALESCE(SUM(ro.recovered_amount::float8), 0)
 			FROM payments p
 			JOIN recovery_outcomes ro ON ro.payment_id = p.id
-			WHERE p.merchant_id::text = $1 AND ro.recovered = true
+			WHERE (p.merchant_id::text = $1 OR p.merchant_id IS NULL) AND ro.recovered = true
 		`, merchantID).Scan(&data.Metrics.TotalRecovered)
 
 		totalVolume := data.Metrics.TotalAtRiskRevenue + data.Metrics.TotalRecovered

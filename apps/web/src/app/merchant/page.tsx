@@ -153,7 +153,7 @@ export default function MerchantPortalPage() {
         <div className="metric-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', padding: '20px', borderRadius: '12px' }}>
           <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Active Subscriptions</div>
           <div style={{ fontSize: '26px', fontWeight: 700, color: 'var(--text-primary)', marginTop: '8px' }}>
-            {metrics.ActiveSubscriptions || 0}
+            {metrics.active_subscriptions ?? metrics.ActiveSubscriptions ?? (data?.subscriptions?.filter((s: any) => s.status === 'ACTIVE').length || 0)}
           </div>
           <div style={{ fontSize: '12px', color: '#10B981', marginTop: '4px' }}>Recurring revenue protected</div>
         </div>
@@ -161,15 +161,15 @@ export default function MerchantPortalPage() {
         <div className="metric-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', padding: '20px', borderRadius: '12px' }}>
           <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>At-Risk Volume</div>
           <div style={{ fontSize: '26px', fontWeight: 700, color: '#F87171', marginTop: '8px' }}>
-            ₹{(metrics.TotalAtRiskRevenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            ₹{(metrics.total_at_risk_revenue ?? metrics.TotalAtRiskRevenue ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{metrics.PendingRecoveries || 0} pending workflows</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{metrics.pending_recoveries ?? metrics.PendingRecoveries ?? 0} pending workflows</div>
         </div>
 
         <div className="metric-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', padding: '20px', borderRadius: '12px' }}>
           <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Recovered Revenue</div>
           <div style={{ fontSize: '26px', fontWeight: 700, color: '#34D399', marginTop: '8px' }}>
-            ₹{(metrics.TotalRecovered || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            ₹{(metrics.total_recovered_revenue ?? metrics.TotalRecovered ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
           <div style={{ fontSize: '12px', color: '#34D399', marginTop: '4px' }}>Verified by payment provider</div>
         </div>
@@ -177,7 +177,7 @@ export default function MerchantPortalPage() {
         <div className="metric-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', padding: '20px', borderRadius: '12px' }}>
           <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Overall Recovery Rate</div>
           <div style={{ fontSize: '26px', fontWeight: 700, color: '#38BDF8', marginTop: '8px' }}>
-            {(metrics.RecoveryRate || 0).toFixed(1)}%
+            {(metrics.recovery_rate ?? metrics.RecoveryRate ?? 0).toFixed(1)}%
           </div>
           <div style={{ fontSize: '12px', color: '#38BDF8', marginTop: '4px' }}>AI Adaptive Orchestration</div>
         </div>
@@ -534,33 +534,53 @@ export default function MerchantPortalPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.customers.map((c: any) => (
-                    <tr key={c.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '12px', fontWeight: 500, color: 'var(--text-primary)' }}>{c.email}</td>
-                      <td style={{ padding: '12px' }}>
-                        {c.communication_opt_out ? (
-                          <span style={{ color: '#F87171', fontSize: '11px', fontWeight: 600 }}>OPTED OUT</span>
-                        ) : (
-                          <span style={{ color: '#34D399', fontSize: '11px', fontWeight: 600 }}>ALLOWED</span>
-                        )}
-                      </td>
-                      <td style={{ padding: '12px', color: '#F87171', fontWeight: 600 }}>{c.failed_count}</td>
-                      <td style={{ padding: '12px', color: '#34D399', fontWeight: 600 }}>{c.recovered_count}</td>
-                      <td style={{ padding: '12px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{c.last_action || 'N/A'}</td>
-                      <td style={{ padding: '12px' }}>
-                        <span style={{
-                          padding: '3px 8px',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          background: c.last_status === 'CAPTURED' ? 'rgba(52, 211, 153, 0.15)' : 'rgba(248, 113, 113, 0.15)',
-                          color: c.last_status === 'CAPTURED' ? '#34D399' : '#F87171'
-                        }}>
-                          {c.last_status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {data.customers.map((c: any) => {
+                    const status = (c.last_status || 'NEW').toUpperCase();
+                    let badgeBg = 'rgba(148, 163, 184, 0.15)';
+                    let badgeColor = 'var(--text-secondary)';
+
+                    if (status === 'CAPTURED' || status === 'RECOVERED' || status === 'SUCCESS') {
+                      badgeBg = 'rgba(52, 211, 153, 0.15)';
+                      badgeColor = '#34D399';
+                    } else if (status === 'ESCALATED' || status === 'REQUIRES_HUMAN_REVIEW') {
+                      badgeBg = 'rgba(245, 158, 11, 0.15)';
+                      badgeColor = '#F59E0B';
+                    } else if (status === 'ANALYZING' || status === 'SCHEDULED' || status === 'ACTIVE') {
+                      badgeBg = 'rgba(56, 189, 248, 0.15)';
+                      badgeColor = '#38BDF8';
+                    } else if (status === 'FAILED' || status === 'HALTED') {
+                      badgeBg = 'rgba(248, 113, 113, 0.15)';
+                      badgeColor = '#F87171';
+                    }
+
+                    return (
+                      <tr key={c.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                        <td style={{ padding: '12px', fontWeight: 500, color: 'var(--text-primary)' }}>{c.email}</td>
+                        <td style={{ padding: '12px' }}>
+                          {c.communication_opt_out ? (
+                            <span style={{ color: '#F87171', fontSize: '11px', fontWeight: 600 }}>OPTED OUT</span>
+                          ) : (
+                            <span style={{ color: '#34D399', fontSize: '11px', fontWeight: 600 }}>ALLOWED</span>
+                          )}
+                        </td>
+                        <td style={{ padding: '12px', color: '#F87171', fontWeight: 600 }}>{c.failed_count ?? 0}</td>
+                        <td style={{ padding: '12px', color: '#34D399', fontWeight: 600 }}>{c.recovered_count ?? 0}</td>
+                        <td style={{ padding: '12px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{c.last_action || 'N/A'}</td>
+                        <td style={{ padding: '12px' }}>
+                          <span style={{
+                            padding: '3px 8px',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            background: badgeBg,
+                            color: badgeColor
+                          }}>
+                            {status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
