@@ -254,6 +254,16 @@ func (e *RecoveryExecutor) ExecuteWorkflow(ctx context.Context, workflowID strin
 	}
 
 	// 6. CHECK 5: Policy Engine Evaluation
+	var aiConfidence float64 = 0.85
+	var aiDiagnosis string
+	_ = e.pool.QueryRow(ctx, `
+		SELECT COALESCE(confidence, 0.85)::float8, COALESCE(diagnosis, '')
+		FROM ai_decisions
+		WHERE workflow_id::text = $1
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, workflowID).Scan(&aiConfidence, &aiDiagnosis)
+
 	polDecision, err := e.policyEngine.Evaluate(ctx, merchantID, schemas.PaymentFailureEvent{
 		PaymentID:   paymentID,
 		Amount:      paymentAmount,
@@ -261,6 +271,8 @@ func (e *RecoveryExecutor) ExecuteWorkflow(ctx context.Context, workflowID strin
 		FailureCode: failureCode.String,
 	}, aiprovider.AIRecommendation{
 		RecommendedAction: recovery.ActionType(actionStr),
+		Confidence:        aiConfidence,
+		Diagnosis:         aiDiagnosis,
 	})
 
 	if err == nil && polDecision.Decision == policy.DecisionBlock {
@@ -279,6 +291,34 @@ func (e *RecoveryExecutor) ExecuteWorkflow(ctx context.Context, workflowID strin
 			},
 		})
 		return res, nil
+	}
+
+	if err == nil && polDecision.Decision == policy.DecisionEscalate {
+		res.Reconciliation = "ESCALATED_POLICY"
+		res.ActionTaken = "HELD_FOR_REVIEW"
+		res.Message = fmt.Sprintf("Policy engine escalated for human review: %s", polDecision.Reason)
+
+		_, _ = e.pool.Exec(ctx, `UPDATE recovery_workflows SET status = 'ESCALATED', updated_at = CURRENT_TIMESTAMP WHERE id::text = $1`, workflowID)
+
+		_ = audit.AppendAuditLog(ctx, e.pool, audit.AuditEvent{
+			WorkflowID: workflowID,
+			Actor:      "executor:policy",
+			Action:     "POLICY_EVALUATED_ESCALATE",
+			Metadata: map[string]interface{}{
+				"reason":     polDecision.Reason,
+				"amount":     paymentAmount,
+				"confidence": aiConfidence,
+			},
+		})
+
+		log.Printf("[Executor] ESCALATED_POLICY: Workflow %s escalated for human intervention. Reason: %s", workflowID, polDecision.Reason)
+		return res, nil
+	}
+
+	if err == nil && polDecision.Decision == policy.DecisionModify {
+		if polDecision.ModifiedAction.RecommendedAction != "" {
+			actionStr = string(polDecision.ModifiedAction.RecommendedAction)
+		}
 	}
 
 	// 7. ALL CHECKS PASSED -> EXECUTE RECOVERY ACTION
