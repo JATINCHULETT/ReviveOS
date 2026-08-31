@@ -4,6 +4,7 @@ use (
 	./apps/api
 	./apps/worker
 	./packages/recovery
+	./packages/risk
 	./packages/schemas
 	./packages/types
 	./packages/utils
