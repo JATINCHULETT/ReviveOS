@@ -32,6 +32,11 @@ export interface WorkflowSummary {
   customer_phone?: string;
   customer_success_count?: number;
   customer_failed_count?: number;
+  fraud_probability?: number;
+  return_probability?: number;
+  overall_risk?: string;
+  expected_loss?: number;
+  risk_action?: string;
   failure_code: string;
   failure_reason?: string;
   status: string;
@@ -76,6 +81,11 @@ export interface WorkflowDetail {
     customer_phone?: string;
     customer_success_count?: number;
     customer_failed_count?: number;
+    fraud_probability?: number;
+    return_probability?: number;
+    overall_risk?: string;
+    expected_loss?: number;
+    risk_action?: string;
     communication_opt_out?: boolean;
     scheduled_at?: string;
   };
@@ -146,6 +156,22 @@ export interface WorkflowDetail {
     time_to_recovery?: string;
     time_to_recovery_seconds?: number;
     created_at?: string;
+  }>;
+  risk_assessments?: Array<{
+    id: string;
+    payment_id: string;
+    workflow_id?: string;
+    event_type: string;
+    fraud_probability: number;
+    fraud_risk_level: string;
+    return_probability?: number;
+    return_risk_level?: string;
+    overall_risk_level: string;
+    expected_loss: number;
+    recommended_action: string;
+    reason?: string;
+    model_version: string;
+    created_at: string;
   }>;
   audit_events?: Array<{
     id?: string;
@@ -229,6 +255,11 @@ export interface InterventionItem {
   is_recovered: boolean;
   customer_success_count: number;
   customer_failed_count: number;
+  fraud_probability?: number;
+  return_probability?: number;
+  overall_risk?: string;
+  expected_loss?: number;
+  risk_action?: string;
   latest_diagnosis: string;
   latest_confidence: number;
   escalation_reason: string;

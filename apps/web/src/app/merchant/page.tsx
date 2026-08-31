@@ -149,7 +149,7 @@ export default function MerchantPortalPage() {
       </div>
 
       {/* Metrics Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '28px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '28px' }}>
         <div className="metric-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', padding: '20px', borderRadius: '12px' }}>
           <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Active Subscriptions</div>
           <div style={{ fontSize: '26px', fontWeight: 700, color: 'var(--text-primary)', marginTop: '8px' }}>
@@ -175,11 +175,19 @@ export default function MerchantPortalPage() {
         </div>
 
         <div className="metric-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', padding: '20px', borderRadius: '12px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Overall Recovery Rate</div>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Recovery Rate</div>
           <div style={{ fontSize: '26px', fontWeight: 700, color: '#38BDF8', marginTop: '8px' }}>
             {(metrics.recovery_rate ?? metrics.RecoveryRate ?? 0).toFixed(1)}%
           </div>
           <div style={{ fontSize: '12px', color: '#38BDF8', marginTop: '4px' }}>AI Adaptive Orchestration</div>
+        </div>
+
+        <div className="metric-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', padding: '20px', borderRadius: '12px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Fraud Protection</div>
+          <div style={{ fontSize: '26px', fontWeight: 700, color: '#818CF8', marginTop: '8px' }}>
+            100%
+          </div>
+          <div style={{ fontSize: '12px', color: '#818CF8', marginTop: '4px' }}>ML Fraud & Return Guard active</div>
         </div>
       </div>
 

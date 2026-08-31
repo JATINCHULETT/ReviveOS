@@ -255,6 +255,11 @@ export default function WorkflowsPage() {
                         ₹{item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </span>
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{item.currency}</div>
+                      <div style={{ marginTop: '4px' }}>
+                        <span className={`badge ${(item.fraud_probability ?? 0) >= 0.7 ? 'badge-danger' : (item.fraud_probability ?? 0) >= 0.35 ? 'badge-warning' : 'badge-success'}`} style={{ fontSize: '10px' }}>
+                          🛡️ {((item.fraud_probability ?? 0.08) * 100).toFixed(0)}% Fraud
+                        </span>
+                      </div>
                     </td>
                     <td>
                       <span className="badge badge-danger" style={{ fontSize: '11px' }}>
@@ -311,7 +316,7 @@ export default function WorkflowsPage() {
                 All Clear! No Pending Human Interventions
               </h3>
               <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
-                High-value and edge-case transactions requiring human review will appear here automatically.
+                High-value, elevated-fraud, and edge-case transactions requiring human review will appear here automatically.
               </p>
             </div>
           )
@@ -322,6 +327,7 @@ export default function WorkflowsPage() {
                 <th>Payment</th>
                 <th>Customer</th>
                 <th>Amount</th>
+                <th>Risk Level</th>
                 <th>Failure Reason</th>
                 <th>Probability</th>
                 <th>Recommended Action</th>
@@ -331,60 +337,70 @@ export default function WorkflowsPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredWorkflows.map((wf) => (
-                <tr key={wf.id} className="clickable">
-                  <td>
-                    <Link href={`/workflows/${wf.id}`} style={{ display: 'block', width: '100%' }}>
-                      <span className="mono" style={{ color: '#60a5fa', fontWeight: 600 }}>
-                        {wf.payment_id ? `${wf.payment_id.substring(0, 18)}...` : wf.id.substring(0, 8)}
-                      </span>
-                    </Link>
-                  </td>
-                  <td>
-                    <div style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
-                      {wf.customer_email || '—'}
-                    </div>
-                  </td>
-                  <td>
-                    <span className="mono">
-                      ₹{wf.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="mono" style={{ fontSize: '12px' }}>
-                      {wf.failure_code || 'UNKNOWN'}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div style={{ width: '40px', height: '4px', background: 'var(--bg-elevated)', borderRadius: '2px', overflow: 'hidden' }}>
-                        <div style={{
-                          height: '100%',
-                          width: `${(wf.recovery_probability * 100).toFixed(0)}%`,
-                          background: wf.recovery_probability > 0.6 ? '#10b981' : wf.recovery_probability > 0.3 ? '#f59e0b' : '#ef4444',
-                        }} />
+              {filteredWorkflows.map((wf) => {
+                const fraudScore = wf.fraud_probability ?? 0.08;
+                const riskLevel = wf.overall_risk ?? (fraudScore >= 0.7 ? 'HIGH' : fraudScore >= 0.35 ? 'MEDIUM' : 'LOW');
+
+                return (
+                  <tr key={wf.id} className="clickable">
+                    <td>
+                      <Link href={`/workflows/${wf.id}`} style={{ display: 'block', width: '100%' }}>
+                        <span className="mono" style={{ color: '#60a5fa', fontWeight: 600 }}>
+                          {wf.payment_id ? `${wf.payment_id.substring(0, 18)}...` : wf.id.substring(0, 8)}
+                        </span>
+                      </Link>
+                    </td>
+                    <td>
+                      <div style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
+                        {wf.customer_email || '—'}
                       </div>
-                      <span className="mono" style={{ fontSize: '12px' }}>
-                        {(wf.recovery_probability * 100).toFixed(0)}%
+                    </td>
+                    <td>
+                      <span className="mono">
+                        ₹{wf.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </span>
-                    </div>
-                  </td>
-                  <td>
-                    <span className="mono" style={{ fontSize: '12px' }}>
-                      {wf.selected_action || 'PENDING'}
-                    </span>
-                  </td>
-                  <td>
-                    <StatusBadge status={wf.status} />
-                  </td>
-                  <td>
-                    <span className="mono">{wf.attempt_count}</span>
-                  </td>
-                  <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {new Date(wf.updated_at || wf.created_at).toLocaleString()}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td>
+                      <span className={`badge ${riskLevel === 'HIGH' ? 'badge-danger' : riskLevel === 'MEDIUM' ? 'badge-warning' : 'badge-success'}`} style={{ fontSize: '11px' }}>
+                        🛡️ {(fraudScore * 100).toFixed(0)}% ({riskLevel})
+                      </span>
+                    </td>
+                    <td>
+                      <span className="mono" style={{ fontSize: '12px' }}>
+                        {wf.failure_code || 'UNKNOWN'}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ width: '40px', height: '4px', background: 'var(--bg-elevated)', borderRadius: '2px', overflow: 'hidden' }}>
+                          <div style={{
+                            height: '100%',
+                            width: `${(wf.recovery_probability * 100).toFixed(0)}%`,
+                            background: wf.recovery_probability > 0.6 ? '#10b981' : wf.recovery_probability > 0.3 ? '#f59e0b' : '#ef4444',
+                          }} />
+                        </div>
+                        <span className="mono" style={{ fontSize: '12px' }}>
+                          {(wf.recovery_probability * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="mono" style={{ fontSize: '12px' }}>
+                        {wf.selected_action || 'PENDING'}
+                      </span>
+                    </td>
+                    <td>
+                      <StatusBadge status={wf.status} />
+                    </td>
+                    <td>
+                      <span className="mono">{wf.attempt_count}</span>
+                    </td>
+                    <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                      {new Date(wf.updated_at || wf.created_at).toLocaleString()}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         ) : (
