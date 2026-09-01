@@ -59,6 +59,7 @@ func RegisterRoutes(pool *pgxpool.Pool) http.Handler {
 	// 5. Payment Provider Webhooks
 	mux.HandleFunc("/webhooks/razorpay", RazorpayWebhookHandler(pool))
 	mux.HandleFunc("/api/v1/webhooks/razorpay", RazorpayWebhookHandler(pool))
+	mux.HandleFunc("/api/reviveos/webhook", V1WebhookEndpointHandler(pool))
 
 	// 6. Authentication & Roles
 	mux.HandleFunc("/auth/login", AuthLoginHandler(pool))
@@ -70,6 +71,15 @@ func RegisterRoutes(pool *pgxpool.Pool) http.Handler {
 	mux.HandleFunc("/merchant/dashboard", MerchantDashboardHandler(pool))
 	mux.HandleFunc("/merchant/subscriptions", MerchantCreateSubscriptionHandler(pool))
 	mux.HandleFunc("/merchant/sandbox/payment-link", MerchantSandboxPaymentLinkHandler(pool))
+
+	// 8. Developer Platform & One-Command Razorpay API v1
+	mux.HandleFunc("/v1/events", APIKeyAuthMiddleware(pool, V1EventsHandler(pool)))
+	mux.HandleFunc("/v1/payments/analyze", APIKeyAuthMiddleware(pool, V1AnalyzePaymentHandler(pool)))
+	mux.HandleFunc("/v1/recovery/decision", APIKeyAuthMiddleware(pool, V1RecoveryDecisionHandler(pool)))
+	mux.HandleFunc("/v1/recovery/execute", APIKeyAuthMiddleware(pool, V1RecoveryExecuteHandler(pool)))
+	mux.HandleFunc("/v1/payments/", APIKeyAuthMiddleware(pool, V1GetPaymentHandler(pool)))
+	mux.HandleFunc("/v1/customers/", APIKeyAuthMiddleware(pool, V1CustomerRecoveryProfileHandler(pool)))
+	mux.HandleFunc("/v1/keys", APIKeyAuthMiddleware(pool, V1APIKeysHandler(pool)))
 
 	return LoggingMiddleware(CORSMiddleware(mux))
 }
