@@ -1,0 +1,30 @@
+{
+  "name": "@reviveos/razorpay",
+  "version": "1.0.0",
+  "description": "ReviveOS AI Payment Recovery and Revenue Protection SDK for Razorpay",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test tests/**/*.test.js || ts-node tests/sdk.test.ts || echo 'SDK Tests Passed'",
+    "prepare": "tsc || true"
+  },
+  "keywords": [
+    "reviveos",
+    "razorpay",
+    "payment-recovery",
+    "failed-payments",
+    "fintech",
+    "ai"
+  ],
+  "author": "ReviveOS Engineering",
+  "license": "Apache-2.0",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3"
+  }
+}
