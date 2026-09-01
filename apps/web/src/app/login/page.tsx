@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Zap,
+  Home,
   Lock,
   Mail,
   ArrowRight,
@@ -16,10 +16,16 @@ import {
   AlertCircle,
   Sparkles,
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { loginUser } from '@/lib/api';
-import GradientMesh from '@/components/3d/GradientMesh';
 import { BadgePulse } from '@/components/ui/AnimatedComponents';
 import ReviveLogo from '@/components/ui/ReviveLogo';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
+
+const PaymentsNetworkBackground = dynamic(
+  () => import('@/components/3d/PaymentsNetworkBackground'),
+  { ssr: false }
+);
 
 export default function LoginPage() {
   const router = useRouter();
@@ -67,64 +73,72 @@ export default function LoginPage() {
         overflow: 'hidden',
       }}
     >
-      <GradientMesh />
+      <PaymentsNetworkBackground />
 
-      {/* Back Link */}
-      <Link
-        href="/"
+      {/* Top Controls: Home Link & Theme Toggle */}
+      <div
         style={{
           position: 'absolute',
-          top: '20px',
-          left: '20px',
+          top: '24px',
+          left: '24px',
+          right: '24px',
           zIndex: 30,
           display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
-          gap: '8px',
-          padding: '8px 14px',
-          borderRadius: 'var(--radius-full)',
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border-subtle)',
-          color: 'var(--text-muted)',
-          fontSize: '13px',
-          fontWeight: 500,
-          transition: 'all 0.2s ease',
         }}
       >
-        <Zap size={14} color="var(--color-accent-light)" />
-        ReviveOS
-      </Link>
+        <Link
+          href="/"
+          title="Back to Home"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '40px',
+            height: '40px',
+            borderRadius: 'var(--radius-full)',
+            background: 'var(--bg-surface)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid var(--border-default)',
+            color: 'var(--text-primary)',
+            boxShadow: 'var(--card-shadow)',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <Home size={18} />
+        </Link>
+        <ThemeToggle />
+      </div>
 
       {/* Login Card */}
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.25, 0.4, 0.25, 1] }}
+        initial={{ opacity: 0, y: 16, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.5, ease: [0.25, 0.4, 0.25, 1] }}
         style={{
           position: 'relative',
           zIndex: 20,
           width: '100%',
-          maxWidth: '420px',
-          background: 'rgba(9, 9, 11, 0.85)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          border: '1px solid var(--border-subtle)',
-          borderRadius: 'var(--radius-xl)',
-          padding: '36px',
+          maxWidth: '430px',
+          background: 'var(--bg-surface)',
+          backdropFilter: 'blur(28px)',
+          WebkitBackdropFilter: 'blur(28px)',
+          border: '1px solid var(--border-default)',
+          borderRadius: '24px',
+          padding: '36px 32px',
+          boxShadow: 'var(--card-shadow)',
         }}
       >
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
             <ReviveLogo size="lg" showTagline={true} href="/" />
           </div>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '8px' }}>
-            Sign in to your autonomous AI recovery console
+          <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', marginTop: '6px' }}>
+            Sign in to access your autonomous revenue recovery console
           </p>
         </div>
-
-        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', textAlign: 'center', margin: '-8px 0 24px' }}>
-          Sign in to access your autonomous revenue recovery console.
-        </p>
 
         {/* Error Alert */}
         <AnimatePresence>
@@ -143,7 +157,7 @@ export default function LoginPage() {
                 alignItems: 'center',
                 gap: '8px',
                 fontSize: '13px',
-                color: '#ef4444',
+                color: 'var(--color-red)',
               }}
             >
               <AlertCircle size={15} />
@@ -165,7 +179,7 @@ export default function LoginPage() {
               alignItems: 'center',
               gap: '8px',
               fontSize: '13px',
-              color: '#10b981',
+              color: 'var(--color-emerald)',
             }}
           >
             <CheckCircle2 size={15} />
@@ -176,7 +190,7 @@ export default function LoginPage() {
         {/* Login Form */}
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
-            <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
+            <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
               Email
             </label>
             <div style={{ position: 'relative' }}>
@@ -187,13 +201,18 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="input"
-                style={{ paddingLeft: '38px' }}
+                style={{
+                  paddingLeft: '38px',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-primary)',
+                }}
               />
             </div>
           </div>
 
           <div>
-            <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
+            <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
               Password
             </label>
             <div style={{ position: 'relative' }}>
@@ -204,7 +223,12 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="input"
-                style={{ paddingLeft: '38px' }}
+                style={{
+                  paddingLeft: '38px',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-primary)',
+                }}
               />
             </div>
           </div>
@@ -215,7 +239,7 @@ export default function LoginPage() {
             type="submit"
             disabled={loading}
             className="btn-primary"
-            style={{ width: '100%', marginTop: '6px', padding: '12px', fontSize: '14px' }}
+            style={{ width: '100%', marginTop: '6px', padding: '12px', fontSize: '14px', fontWeight: 700 }}
           >
             {loading ? 'Authenticating...' : 'Sign In to Console'}
             <ArrowRight size={15} />
