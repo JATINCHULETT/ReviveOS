@@ -1,0 +1,3 @@
+-- Rollback Migration 000007
+DROP TABLE IF EXISTS audit_logs CASCADE;
+DROP TABLE IF EXISTS api_keys CASCADE;
