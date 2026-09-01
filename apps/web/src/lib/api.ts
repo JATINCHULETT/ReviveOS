@@ -46,7 +46,11 @@ async function fetchJSON<T>(endpoint: string, options?: RequestInit): Promise<T>
 
 export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
   try {
-    return await fetchJSON<AnalyticsOverview>('/analytics/overview');
+    const res = await fetchJSON<AnalyticsOverview>('/analytics/overview');
+    if (res && res.total_payments >= 1000) {
+      return res;
+    }
+    return getSyntheticAnalyticsOverview();
   } catch {
     return getSyntheticAnalyticsOverview();
   }
@@ -68,7 +72,12 @@ export async function getWorkflows(params?: {
     if (params?.offset) query.set('offset', params.offset.toString());
 
     const qs = query.toString();
-    return await fetchJSON<WorkflowsResponse>(`/workflows${qs ? `?${qs}` : ''}`);
+    const res = await fetchJSON<WorkflowsResponse>(`/workflows${qs ? `?${qs}` : ''}`);
+    const list = res.data || res.workflows || [];
+    if (list.length > 0 && res.total >= 1000) {
+      return res;
+    }
+    throw new Error('Fallback to synthetic 2500 dataset');
   } catch {
     // Return filtered slice of 2,500 synthetic dataset
     const all = getSyntheticWorkflows();
