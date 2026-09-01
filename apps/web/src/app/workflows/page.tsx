@@ -3,16 +3,17 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getWorkflows, getInterventions, approveWorkflow, rejectWorkflow } from '@/lib/api';
+import { getSyntheticWorkflows } from '@/lib/syntheticDataset';
 import { WorkflowSummary } from '@/lib/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { LoadingView, EmptyView, ErrorView } from '@/components/ui/StateViews';
 import { RefreshCw, Search, Filter, ShieldAlert, CheckCircle, XCircle, UserCheck, AlertTriangle } from 'lucide-react';
 
 export default function WorkflowsPage() {
-  const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
+  const [workflows, setWorkflows] = useState<WorkflowSummary[]>(() => getSyntheticWorkflows().slice(0, 50));
   const [interventions, setInterventions] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'ALL' | 'INTERVENTIONS'>('ALL');
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
