@@ -23,7 +23,7 @@ const LAST_NAMES = [
   'Singhania', 'Reddy', 'Deshmukh', 'Kapoor', 'Bhatia', 'Saxena', 'Mishra', 'Banerjee', 'Kulkarni', 'Aggarwal'
 ];
 
-const DOMAINS = ['gmail.com', 'outlook.com', 'enterprise.in', 'techcorp.io', 'startup.co', 'fintech.ai', 'acme.com'];
+const DOMAINS = ['revive-os.me', 'revive-os.me', 'gmail.com', 'outlook.com', 'enterprise.in', 'techcorp.io', 'startup.co', 'fintech.ai', 'acme.com'];
 
 const PLAN_AMOUNTS = [499, 999, 1499, 2499, 4999, 9999, 14999, 24999, 49999, 85000];
 
@@ -176,7 +176,159 @@ export function generateSyntheticWorkflows(count: number = 2500): WorkflowSummar
     });
   }
 
+  // Prepend escalated human review test cases with @revive-os.me emails
+  const testInterventions = getSyntheticInterventions();
+  testInterventions.forEach((item, idx) => {
+    items.unshift({
+      id: item.id,
+      payment_id: item.payment_id,
+      amount: item.amount,
+      currency: item.currency,
+      customer_id: item.customer_id,
+      customer_email: item.customer_email,
+      customer_phone: item.customer_phone,
+      customer_success_count: item.customer_success_count,
+      customer_failed_count: item.customer_failed_count,
+      fraud_probability: item.fraud_probability,
+      return_probability: item.return_probability,
+      overall_risk: item.overall_risk,
+      expected_loss: item.expected_loss,
+      risk_action: item.risk_action,
+      failure_code: item.failure_code,
+      failure_reason: item.escalation_reason,
+      status: 'ESCALATED',
+      recovery_probability: item.recovery_probability,
+      selected_action: item.selected_action,
+      attempt_count: 1,
+      recovered: false,
+      created_at: item.created_at,
+      updated_at: item.created_at,
+    });
+  });
+
   return items;
+}
+
+// Dedicated Synthetic Human Interventions with fake @revive-os.me emails
+export function getSyntheticInterventions(): any[] {
+  const now = new Date('2026-09-01T14:30:00Z');
+  return [
+    {
+      id: 'wf_esc_revive_101',
+      payment_id: 'pay_revive_85000_ent_01',
+      amount: 85000,
+      currency: 'INR',
+      customer_id: 'cust_alex_revive',
+      customer_email: 'alex.morgan@revive-os.me',
+      customer_phone: '+919876543210',
+      customer_success_count: 8,
+      customer_failed_count: 1,
+      fraud_probability: 0.12,
+      return_probability: 0.04,
+      overall_risk: 'LOW',
+      expected_loss: 10200.0,
+      risk_action: 'ALLOW',
+      failure_code: 'LIMIT_EXCEEDED',
+      escalation_reason: 'High-value Enterprise Tier (₹85,000) threshold exceeded — requires operator authorization',
+      selected_action: 'PAYMENT_LINK',
+      latest_confidence: 0.92,
+      recovery_probability: 0.92,
+      communication_opt_out: false,
+      created_at: new Date(now.getTime() - 18 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'wf_esc_revive_102',
+      payment_id: 'pay_revive_24999_pro_02',
+      amount: 24999,
+      currency: 'INR',
+      customer_id: 'cust_sarah_revive',
+      customer_email: 'sarah.chen@revive-os.me',
+      customer_phone: '+919812345678',
+      customer_success_count: 4,
+      customer_failed_count: 2,
+      fraud_probability: 0.78,
+      return_probability: 0.55,
+      overall_risk: 'HIGH',
+      expected_loss: 19499.22,
+      risk_action: 'REVIEW',
+      failure_code: 'AUTHENTICATION_FAILED',
+      escalation_reason: 'ML Risk Guard flagged anomalous velocity spike (78% fraud risk score) from novel subnet',
+      selected_action: 'PAYMENT_LINK',
+      latest_confidence: 0.65,
+      recovery_probability: 0.65,
+      communication_opt_out: false,
+      created_at: new Date(now.getTime() - 42 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'wf_esc_revive_103',
+      payment_id: 'pay_revive_14999_ann_03',
+      amount: 14999,
+      currency: 'INR',
+      customer_id: 'cust_vikram_revive',
+      customer_email: 'vikram.mehta@revive-os.me',
+      customer_phone: '+919823456789',
+      customer_success_count: 6,
+      customer_failed_count: 0,
+      fraud_probability: 0.05,
+      return_probability: 0.02,
+      overall_risk: 'LOW',
+      expected_loss: 749.95,
+      risk_action: 'ALLOW',
+      failure_code: 'MANDATE_LAPSED',
+      escalation_reason: 'Customer communication opt-out conflict — automated SMS/WhatsApp halted, manual dispatch required',
+      selected_action: 'UPDATE_PAYMENT_METHOD',
+      latest_confidence: 0.88,
+      recovery_probability: 0.88,
+      communication_opt_out: true,
+      created_at: new Date(now.getTime() - 75 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'wf_esc_revive_104',
+      payment_id: 'pay_revive_49999_cld_04',
+      amount: 49999,
+      currency: 'INR',
+      customer_id: 'cust_billing_revive',
+      customer_email: 'billing.ops@revive-os.me',
+      customer_phone: '+919834567890',
+      customer_success_count: 12,
+      customer_failed_count: 3,
+      fraud_probability: 0.08,
+      return_probability: 0.03,
+      overall_risk: 'LOW',
+      expected_loss: 3999.92,
+      risk_action: 'ALLOW',
+      failure_code: 'INSUFFICIENT_FUNDS',
+      escalation_reason: '3 recurring billing cycle failures on mandate — requires manual payment method re-auth',
+      selected_action: 'DELAYED_RETRY',
+      latest_confidence: 0.84,
+      recovery_probability: 0.84,
+      communication_opt_out: false,
+      created_at: new Date(now.getTime() - 110 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'wf_esc_revive_105',
+      payment_id: 'pay_revive_85000_sec_05',
+      amount: 85000,
+      currency: 'INR',
+      customer_id: 'cust_security_revive',
+      customer_email: 'security.team@revive-os.me',
+      customer_phone: '+919845678901',
+      customer_success_count: 15,
+      customer_failed_count: 1,
+      fraud_probability: 0.42,
+      return_probability: 0.18,
+      overall_risk: 'MEDIUM',
+      expected_loss: 35700.0,
+      risk_action: 'REVIEW',
+      failure_code: 'SUSPECTED_FRAUD',
+      escalation_reason: 'Card network high-risk decline code (05_DO_NOT_HONOUR) on corporate credit rail',
+      selected_action: 'PAYMENT_LINK',
+      latest_confidence: 0.71,
+      recovery_probability: 0.71,
+      communication_opt_out: false,
+      created_at: new Date(now.getTime() - 140 * 60 * 1000).toISOString(),
+    },
+  ];
 }
 
 // Cached singleton synthetic dataset

@@ -7,7 +7,7 @@ import { getSyntheticWorkflows } from '@/lib/syntheticDataset';
 import { WorkflowSummary } from '@/lib/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { LoadingView, EmptyView, ErrorView } from '@/components/ui/StateViews';
-import { RefreshCw, Search, Filter, ShieldAlert, CheckCircle, XCircle, UserCheck, AlertTriangle } from 'lucide-react';
+import { RefreshCw, Search, Filter, ShieldAlert, CheckCircle, XCircle, UserCheck, AlertTriangle, Shield, Check, X } from 'lucide-react';
 
 export default function WorkflowsPage() {
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>(() => getSyntheticWorkflows().slice(0, 50));
@@ -126,9 +126,9 @@ export default function WorkflowsPage() {
         <button
           onClick={() => setActiveTab('INTERVENTIONS')}
           style={{
-            background: activeTab === 'INTERVENTIONS' ? '#78350f' : 'rgba(245, 158, 11, 0.1)',
-            border: activeTab === 'INTERVENTIONS' ? '1px solid #f59e0b' : '1px solid rgba(245, 158, 11, 0.3)',
-            color: activeTab === 'INTERVENTIONS' ? '#fef3c7' : '#f59e0b',
+            background: activeTab === 'INTERVENTIONS' ? 'var(--color-amber-bg)' : 'transparent',
+            border: activeTab === 'INTERVENTIONS' ? '1px solid var(--color-amber-border)' : '1px solid transparent',
+            color: activeTab === 'INTERVENTIONS' ? 'var(--color-amber)' : 'var(--text-secondary)',
             padding: '8px 16px',
             borderRadius: '8px',
             fontSize: '13px',
@@ -140,8 +140,8 @@ export default function WorkflowsPage() {
           }}
         >
           <ShieldAlert size={16} />
-          <span>🚨 Needs Human Review</span>
-          <span style={{ background: '#f59e0b', color: '#000', borderRadius: '12px', padding: '2px 8px', fontSize: '11px', fontWeight: 800 }}>
+          <span>Needs Human Review</span>
+          <span style={{ background: 'var(--color-amber)', color: '#ffffff', borderRadius: '12px', padding: '2px 8px', fontSize: '11px', fontWeight: 800 }}>
             {interventions.length}
           </span>
         </button>
@@ -243,11 +243,17 @@ export default function WorkflowsPage() {
                       <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px' }}>
                         {item.customer_email || '—'}
                       </div>
-                      <div style={{ display: 'flex', gap: '8px', fontSize: '11px', marginTop: '4px' }}>
-                        <span style={{ color: '#10b981' }}>✓ {item.customer_success_count || 0} paid</span>
-                        <span style={{ color: '#ef4444' }}>✗ {item.customer_failed_count || 0} failed</span>
+                      <div style={{ display: 'flex', gap: '8px', fontSize: '11px', marginTop: '4px', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--color-emerald)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <Check size={11} /> {item.customer_success_count || 0} paid
+                        </span>
+                        <span style={{ color: 'var(--color-red)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <X size={11} /> {item.customer_failed_count || 0} failed
+                        </span>
                         {item.communication_opt_out && (
-                          <span style={{ color: '#f59e0b', fontWeight: 700 }}>⚠️ Opted Out</span>
+                          <span style={{ color: 'var(--color-amber)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                            <AlertTriangle size={11} /> Opted Out
+                          </span>
                         )}
                       </div>
                     </td>
@@ -258,7 +264,7 @@ export default function WorkflowsPage() {
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{item.currency}</div>
                       <div style={{ marginTop: '4px' }}>
                         <span className={`badge ${(item.fraud_probability ?? 0) >= 0.7 ? 'badge-danger' : (item.fraud_probability ?? 0) >= 0.35 ? 'badge-warning' : 'badge-success'}`} style={{ fontSize: '10px' }}>
-                          🛡️ {((item.fraud_probability ?? 0.08) * 100).toFixed(0)}% Fraud
+                          <Shield size={10} style={{ marginRight: '3px' }} /> {((item.fraud_probability ?? 0.08) * 100).toFixed(0)}% Fraud
                         </span>
                       </div>
                     </td>
@@ -268,8 +274,17 @@ export default function WorkflowsPage() {
                       </span>
                     </td>
                     <td>
-                      <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', color: '#fef3c7' }}>
-                        <AlertTriangle size={12} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'text-top', color: '#f59e0b' }} />
+                      <div style={{
+                        background: 'var(--color-amber-bg)',
+                        border: '1px solid var(--color-amber-border)',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        color: 'var(--color-amber)',
+                        fontWeight: 600,
+                        lineHeight: 1.4,
+                      }}>
+                        <AlertTriangle size={13} style={{ display: 'inline', marginRight: '5px', verticalAlign: 'text-top' }} />
                         {item.escalation_reason || 'Policy threshold exceeded'}
                       </div>
                     </td>
@@ -325,16 +340,16 @@ export default function WorkflowsPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Payment</th>
-                <th>Customer</th>
-                <th>Amount</th>
-                <th>Risk Level</th>
-                <th>Failure Reason</th>
-                <th>Probability</th>
-                <th>Recommended Action</th>
-                <th>Status</th>
-                <th>Attempts</th>
-                <th>Updated</th>
+                <th style={{ minWidth: '150px' }}>Payment</th>
+                <th style={{ minWidth: '180px' }}>Customer</th>
+                <th style={{ minWidth: '110px' }}>Amount</th>
+                <th style={{ minWidth: '120px' }}>Status</th>
+                <th style={{ minWidth: '130px' }}>Risk Level</th>
+                <th style={{ minWidth: '160px' }}>Failure Reason</th>
+                <th style={{ minWidth: '110px' }}>Probability</th>
+                <th style={{ minWidth: '150px' }}>Recommended Action</th>
+                <th style={{ minWidth: '80px' }}>Attempts</th>
+                <th style={{ minWidth: '120px' }}>Updated</th>
               </tr>
             </thead>
             <tbody>
@@ -345,35 +360,48 @@ export default function WorkflowsPage() {
                 return (
                   <tr key={wf.id} className="clickable">
                     <td>
-                      <Link href={`/workflows/${wf.id}`} style={{ display: 'block', width: '100%' }}>
-                        <span className="mono" style={{ color: '#60a5fa', fontWeight: 600 }}>
-                          {wf.payment_id ? `${wf.payment_id.substring(0, 18)}...` : wf.id.substring(0, 8)}
+                      <Link href={`/workflows/${wf.id}`} style={{ display: 'block' }}>
+                        <span className="mono" style={{ color: '#60a5fa', fontWeight: 600, fontSize: '12.5px' }}>
+                          {wf.payment_id ? `${wf.payment_id.substring(0, 17)}...` : wf.id.substring(0, 8)}
                         </span>
                       </Link>
                     </td>
                     <td>
-                      <div style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
+                      <div
+                        title={wf.customer_email || ''}
+                        style={{
+                          fontSize: '12.5px',
+                          color: 'var(--text-primary)',
+                          maxWidth: '190px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
                         {wf.customer_email || '—'}
                       </div>
                     </td>
                     <td>
-                      <span className="mono">
+                      <span className="mono" style={{ fontWeight: 700, fontSize: '13px' }}>
                         ₹{wf.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </span>
                     </td>
                     <td>
+                      <StatusBadge status={wf.status} />
+                    </td>
+                    <td>
                       <span className={`badge ${riskLevel === 'HIGH' ? 'badge-danger' : riskLevel === 'MEDIUM' ? 'badge-warning' : 'badge-success'}`} style={{ fontSize: '11px' }}>
-                        🛡️ {(fraudScore * 100).toFixed(0)}% ({riskLevel})
+                        <Shield size={11} style={{ marginRight: '3px' }} /> {(fraudScore * 100).toFixed(0)}% ({riskLevel})
                       </span>
                     </td>
                     <td>
-                      <span className="mono" style={{ fontSize: '12px' }}>
+                      <span className="mono" style={{ fontSize: '11.5px', display: 'inline-block', maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={wf.failure_code || 'UNKNOWN'}>
                         {wf.failure_code || 'UNKNOWN'}
                       </span>
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <div style={{ width: '40px', height: '4px', background: 'var(--bg-elevated)', borderRadius: '2px', overflow: 'hidden' }}>
+                        <div style={{ width: '36px', height: '4px', background: 'var(--bg-elevated)', borderRadius: '2px', overflow: 'hidden' }}>
                           <div style={{
                             height: '100%',
                             width: `${(wf.recovery_probability * 100).toFixed(0)}%`,
@@ -386,18 +414,15 @@ export default function WorkflowsPage() {
                       </div>
                     </td>
                     <td>
-                      <span className="mono" style={{ fontSize: '12px' }}>
+                      <span className="mono" style={{ fontSize: '11.5px' }}>
                         {wf.selected_action || 'PENDING'}
                       </span>
                     </td>
                     <td>
-                      <StatusBadge status={wf.status} />
+                      <span className="mono" style={{ fontSize: '12px' }}>{wf.attempt_count}</span>
                     </td>
-                    <td>
-                      <span className="mono">{wf.attempt_count}</span>
-                    </td>
-                    <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                      {new Date(wf.updated_at || wf.created_at).toLocaleString()}
+                    <td style={{ fontSize: '11.5px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                      {new Date(wf.updated_at || wf.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ({new Date(wf.updated_at || wf.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })})
                     </td>
                   </tr>
                 );

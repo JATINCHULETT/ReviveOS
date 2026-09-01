@@ -9,6 +9,7 @@ import {
   getSyntheticAnalyticsOverview,
   getSyntheticWorkflows,
   getSyntheticWorkflowDetail,
+  getSyntheticInterventions,
 } from './syntheticDataset';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -288,8 +289,18 @@ export async function createSandboxPaymentLink(data: {
 }
 
 export async function getInterventions(merchantId?: string): Promise<{ data: any[]; total: number }> {
-  const qs = merchantId ? `?merchant_id=${encodeURIComponent(merchantId)}` : '';
-  return fetchJSON(`/workflows/interventions${qs}`);
+  try {
+    const qs = merchantId ? `?merchant_id=${encodeURIComponent(merchantId)}` : '';
+    const res = await fetchJSON<{ data: any[]; total?: number }>(`/workflows/interventions${qs}`);
+    if (res && res.data && res.data.length > 0) {
+      return { data: res.data, total: res.total || res.data.length };
+    }
+    const synthetic = getSyntheticInterventions();
+    return { data: synthetic, total: synthetic.length };
+  } catch {
+    const synthetic = getSyntheticInterventions();
+    return { data: synthetic, total: synthetic.length };
+  }
 }
 
 export async function approveWorkflow(id: string, data?: { action?: string; notes?: string }): Promise<any> {
