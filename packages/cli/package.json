@@ -1,0 +1,27 @@
+{
+  "name": "reviveos",
+  "version": "1.0.0",
+  "description": "ReviveOS One-Command Developer CLI for AI Payment Recovery",
+  "bin": {
+    "reviveos": "./bin/reviveos.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test tests/**/*.test.js"
+  },
+  "keywords": [
+    "reviveos",
+    "cli",
+    "razorpay",
+    "recovery",
+    "fintech"
+  ],
+  "author": "ReviveOS Engineering",
+  "license": "Apache-2.0"
+}
