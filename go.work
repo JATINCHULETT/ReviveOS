@@ -10,4 +10,5 @@ use (
 	./packages/utils
 	./services
 	./simulator
+	./cmd/seed_data
 )
