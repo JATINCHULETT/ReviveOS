@@ -9,7 +9,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   // Standalone pages that do NOT show dashboard sidebar/header
-  const isStandalone = pathname === '/' || pathname === '/login';
+  const isStandalone = pathname === '/' || pathname === '/login' || pathname.startsWith('/docs');
 
   if (isStandalone) {
     return <main style={{ minHeight: '100vh' }}>{children}</main>;

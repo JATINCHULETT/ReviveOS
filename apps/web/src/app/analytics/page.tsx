@@ -152,7 +152,7 @@ export default function AnalyticsPage() {
             </thead>
             <tbody>
               {data.recent_outcomes.map((item, idx) => (
-                <tr key={item.payment_id || idx}>
+                <tr key={`${item.payment_id || 'outcome'}-${item.created_at || ''}-${idx}`}>
                   <td><span className="mono">{item.payment_id.substring(0, 16)}...</span></td>
                   <td><span className="mono">₹{item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></td>
                   <td><span className="mono" style={{ fontSize: '12px' }}>{item.failure_code}</span></td>

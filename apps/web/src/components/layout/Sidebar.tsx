@@ -17,6 +17,8 @@ import {
   LogOut,
   User,
   Users,
+  Terminal,
+  BookOpen,
 } from 'lucide-react';
 import ReviveLogo from '@/components/ui/ReviveLogo';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -41,6 +43,8 @@ export default function Sidebar() {
     { label: 'Analytics', href: '/analytics', icon: BarChart3 },
     { label: 'Workflows', href: '/workflows', icon: GitBranch },
     { label: 'Customers & Retries', href: '/merchant', icon: Users },
+    { label: 'Developer & SDK', href: '/developer', icon: Terminal },
+    { label: 'Documentation', href: '/docs', icon: BookOpen },
     { label: 'System Health', href: '/system', icon: Server },
   ];
 

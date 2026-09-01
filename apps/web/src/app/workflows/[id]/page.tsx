@@ -958,7 +958,7 @@ export default function WorkflowDetailPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {auditEvents.map((ev, idx) => (
                     <div
-                      key={ev.event_id || ev.id || idx}
+                      key={`${ev.event_id || ev.id || 'ev'}-${idx}`}
                       style={{
                         background: 'var(--bg-elevated)',
                         border: '1px solid var(--border-subtle)',
