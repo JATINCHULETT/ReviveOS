@@ -271,11 +271,11 @@ export default function DeveloperPage() {
         {/* Header Hero Banner */}
         <div
           style={{
-            background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(99, 102, 241, 0.08) 100%)',
-            border: '1px solid rgba(14, 165, 233, 0.25)',
+            background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%)',
+            border: '1px solid var(--border-default)',
             borderRadius: '16px',
-            padding: '24px 28px',
-            marginBottom: '24px',
+            padding: '28px 32px',
+            marginBottom: '28px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -287,8 +287,9 @@ export default function DeveloperPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
               <span
                 style={{
-                  background: 'var(--color-accent-blue)',
-                  color: '#fff',
+                  background: 'var(--color-accent-blue-bg)',
+                  border: '1px solid var(--color-accent-blue)',
+                  color: 'var(--color-accent-blue)',
                   fontSize: '11px',
                   fontWeight: 700,
                   padding: '3px 8px',
@@ -298,7 +299,7 @@ export default function DeveloperPage() {
               >
                 ONE-COMMAND INTEGRATION
               </span>
-              <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Razorpay AI Layer</span>
+              <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>Razorpay AI Layer</span>
             </div>
             <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
               Plug AI Payment Recovery into Razorpay in 60 Seconds
@@ -311,16 +312,17 @@ export default function DeveloperPage() {
           <div style={{ display: 'flex', gap: '12px' }}>
             <div
               style={{
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border-subtle)',
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-default)',
                 borderRadius: '10px',
                 padding: '10px 16px',
-                fontFamily: 'monospace',
+                fontFamily: 'var(--font-mono)',
                 fontSize: '13px',
                 color: 'var(--color-accent-light)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
+                boxShadow: 'var(--card-shadow)',
               }}
             >
               <span>$ npx reviveos init</span>
@@ -329,7 +331,7 @@ export default function DeveloperPage() {
                 style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}
                 title="Copy command"
               >
-                {copiedKey === 'cmd' ? <Check size={14} color="var(--color-green)" /> : <Copy size={14} />}
+                {copiedKey === 'cmd' ? <Check size={14} color="var(--color-emerald)" /> : <Copy size={14} />}
               </button>
             </div>
           </div>
@@ -408,20 +410,21 @@ export default function DeveloperPage() {
 
               <div
                 style={{
-                  background: '#0d1117',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
                   borderRadius: '8px',
                   padding: '14px',
-                  fontFamily: 'monospace',
+                  fontFamily: 'var(--font-mono)',
                   fontSize: '13px',
-                  color: '#e6edf3',
+                  color: 'var(--text-primary)',
                   position: 'relative',
                   marginBottom: '16px',
                 }}
               >
-                <div style={{ color: '#8b949e', marginBottom: '4px' }}># 1. Install ReviveOS Razorpay SDK</div>
-                <div style={{ color: '#7ee787' }}>npm install @reviveos/razorpay</div>
-                <div style={{ color: '#8b949e', margin: '8px 0 4px' }}># 2. Run the ReviveOS Auto-Configurator</div>
-                <div style={{ color: '#79c0ff' }}>npx reviveos init</div>
+                <div style={{ color: 'var(--text-muted)', marginBottom: '4px' }}># 1. Install ReviveOS Razorpay SDK</div>
+                <div style={{ color: 'var(--color-emerald)', fontWeight: 600 }}>npm install @reviveos/razorpay</div>
+                <div style={{ color: 'var(--text-muted)', margin: '8px 0 4px' }}># 2. Run the ReviveOS Auto-Configurator</div>
+                <div style={{ color: 'var(--color-accent-light)', fontWeight: 600 }}>npx reviveos init</div>
               </div>
 
               <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
@@ -450,18 +453,19 @@ export default function DeveloperPage() {
                 </div>
                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>Generated Webhook Route</h3>
               </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'var(--font-mono)' }}>
                 app/api/reviveos/webhook/route.ts
               </div>
 
               <div
                 style={{
-                  background: '#0d1117',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
                   borderRadius: '8px',
                   padding: '14px',
-                  fontFamily: 'monospace',
+                  fontFamily: 'var(--font-mono)',
                   fontSize: '12px',
-                  color: '#e6edf3',
+                  color: 'var(--text-primary)',
                   overflowX: 'auto',
                   maxHeight: '260px',
                 }}
