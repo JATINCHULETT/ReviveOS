@@ -314,7 +314,7 @@ export default function LightStreakHero() {
           >
             <Sparkles size={14} color="var(--color-accent)" />
             <span style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--color-accent)', letterSpacing: '0.04em' }}>
-              AUTONOMOUS AI PAYMENT RECOVERY • 68.4% CAPTURE RATE
+              AUTONOMOUS AI PAYMENT RECOVERY • ML FRAUD DETECTION • 68.4% CAPTURE RATE
             </span>
           </div>
 
@@ -356,7 +356,7 @@ export default function LightStreakHero() {
               maxWidth: '540px',
             }}
           >
-            ReviveOS eliminates involuntary churn with real-time DeepSeek-R1 intelligence. Predict recoverability, execute zero-touch retries, and dispatch smart recovery checkout links autonomously.
+            ReviveOS eliminates involuntary churn with real-time DeepSeek-R1 intelligence and ML fraud detection. Predict recoverability, block high-risk fraud, score expected loss, and execute zero-touch retries autonomously.
           </p>
 
           {/* CTA Buttons */}
@@ -478,8 +478,8 @@ export default function LightStreakHero() {
             {/* Mini Progress Spark Line */}
             <div
               style={{
-                marginTop: '22px',
-                paddingTop: '16px',
+                marginTop: '18px',
+                paddingTop: '14px',
                 borderTop: '1px solid var(--border-subtle)',
                 display: 'flex',
                 alignItems: 'center',
@@ -490,6 +490,26 @@ export default function LightStreakHero() {
             >
               <span>Zero-Touch Autopay</span>
               <span style={{ color: 'var(--color-emerald)', fontWeight: 700 }}>99.2% Settle</span>
+            </div>
+
+            {/* ML Fraud Guard Indicator */}
+            <div
+              style={{
+                marginTop: '10px',
+                paddingTop: '10px',
+                borderTop: '1px solid var(--border-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '12px',
+                color: 'var(--text-muted)',
+              }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <ShieldCheck size={14} color="#f59e0b" />
+                <span>ML Fraud Guard</span>
+              </span>
+              <span style={{ color: '#f59e0b', fontWeight: 700 }}>0.04% Low Risk · Protected</span>
             </div>
           </div>
         </motion.div>
@@ -535,7 +555,7 @@ export default function LightStreakHero() {
             }}
           >
             <ShieldCheck size={14} color="var(--color-emerald)" />
-            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>PCI-DSS Ready</span>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>PCI-DSS & ML Fraud Guard Ready</span>
           </div>
         </div>
       </div>

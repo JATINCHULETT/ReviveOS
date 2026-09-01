@@ -17,6 +17,7 @@ import {
   Play,
   CheckCircle2,
   ExternalLink,
+  Code2,
 } from 'lucide-react';
 import {
   ScrollProgressBar,
@@ -32,6 +33,7 @@ import { ThemeToggle, FloatingThemeToggle } from '@/components/ui/ThemeToggle';
 import LightStreakHero from '@/components/ui/LightStreakHero';
 import TechnicalPipelineDiagram from '@/components/ui/TechnicalPipelineDiagram';
 import ParticleMorphingSection from '@/components/ui/ParticleMorphingSection';
+import DeveloperDocsSection from '@/components/ui/DeveloperDocsSection';
 import ReviveLogo from '@/components/ui/ReviveLogo';
 import { createSandboxPaymentLink, getMerchants } from '@/lib/api';
 
@@ -98,73 +100,73 @@ export default function LandingPage() {
       prob: '62.1%',
       strategy: 'Dispatches high-converting payment method update link via Resend email.',
     },
-    BANK_UNAVAILABLE: {
-      title: 'Issuing Bank Gateway Downtime',
-      desc: 'Bank switch temporarily unreachable.',
-      action: 'IMMEDIATE_RETRY (Jitter Backoff)',
-      prob: '88.5%',
-      strategy: 'Instant zero-touch retry with exponential jitter without customer interruption.',
+    BANK_DOWNTIME: {
+      title: 'Temporary Bank Downtime / Issuer Offline',
+      desc: 'Issuer switch timeout or temporary bank network drop.',
+      action: 'EXPONENTIAL_BACKOFF_RETRY',
+      prob: '94.2%',
+      strategy: 'Predictive algorithm retries automatically when gateway switch recovers.',
     },
-    AUTHENTICATION_REQUIRED: {
-      title: '3D Secure Friction / OTP Timeout',
-      desc: 'Customer abandoned OTP authentication.',
-      action: 'PAYMENT_LINK (Smart Notification)',
-      prob: '71.0%',
-      strategy: 'Direct 1-click fallback payment link sent to WhatsApp/Email.',
+    LIMIT_EXCEEDED: {
+      title: 'Velocity Limit Exceeded',
+      desc: 'Daily or transaction banking volume limit reached.',
+      action: 'PAYMENT_LINK (Smart Multi-Rail)',
+      prob: '81.0%',
+      strategy: 'Sends instant multi-rail smart checkout link with UPI and Netbanking fallbacks.',
     },
   };
 
-  // 6 Pinned Scroll Orchestrator Stages
-  const orchestratorStages = [
+  // Pipeline Stages
+  const pipelineStages = [
     {
       num: '01',
-      title: 'Diagnose & Classify',
-      subtitle: 'Deterministic Error Mapping',
+      title: 'Deterministic Gateway Classifier',
+      subtitle: 'Failure Taxonomy Engine',
       tag: 'Classification',
       color: '#38bdf8',
       accentGradient: 'linear-gradient(90deg, #38bdf8, #818cf8)',
       description:
-        'ReviveOS intercepts payment gateway webhook errors across 50+ bank codes. In milliseconds, failures are mapped into high-probability recovery categories.',
+        'Instant deterministic taxonomy mapping of raw gateway decline codes into actionable operational categories.',
     },
     {
       num: '02',
-      title: 'Predict Recoverability',
-      subtitle: 'Machine Learning Probability Engine',
+      title: 'Revenue Risk & ML Fraud Guard',
+      subtitle: 'Random Forest & Gradient Boosting',
+      tag: 'Risk Protection',
+      color: '#f59e0b',
+      accentGradient: 'linear-gradient(90deg, #f59e0b, #ef4444)',
+      description:
+        'Dual-model AI engine evaluates transaction anomaly scores, return risk, and expected financial loss to prevent fraud leakage.',
+    },
+    {
+      num: '03',
+      title: 'Recovery Probability Model',
+      subtitle: 'Logistic Calibration Engine',
       tag: 'Prediction',
       color: '#c084fc',
       accentGradient: 'linear-gradient(90deg, #c084fc, #ec4899)',
       description:
-        'Our statistical inference model scores likelihood of successful recapture based on historical issuing bank reliability, past customer habits, and transaction size.',
-    },
-    {
-      num: '03',
-      title: 'Decide Strategy',
-      subtitle: 'DeepSeek-R1 Chain-of-Thought Reasoning',
-      tag: 'AI Reasoning',
-      color: '#ec4899',
-      accentGradient: 'linear-gradient(90deg, #ec4899, #f43f5e)',
-      description:
-        'Instead of crude static retries, DeepSeek-R1 reasons through the root cause to choose between Zero-Touch Autopay Retries, Payment Method Update Links, or Fallback Channels.',
+        'Statistical machine learning model calculates exact recoverability probability calibrated against historical outcomes.',
     },
     {
       num: '04',
-      title: 'Dynamic Timing',
-      subtitle: 'Payday & Gateway Health Alignment',
-      tag: 'Timing Optimization',
-      color: '#f59e0b',
-      accentGradient: 'linear-gradient(90deg, #f59e0b, #eab308)',
+      title: 'Contextual AI Reasoning',
+      subtitle: 'DeepSeek-R1 Strategy Engine',
+      tag: 'Strategy',
+      color: '#ec4899',
+      accentGradient: 'linear-gradient(90deg, #ec4899, #f43f5e)',
       description:
-        'Retries are delayed and dynamically fired at the precise optimal window—avoiding bank maintenance hours and aligning with salary credit periods.',
+        'Context-augmented LLM reasons over empirical recovery distributions to select optimal timing and highest-yield actions.',
     },
     {
       num: '05',
-      title: 'Multi-Channel Execution',
-      subtitle: 'Zero-Touch Tokens & Resend Notifications',
-      tag: 'Execution',
+      title: 'Policy Safety & Guardrails',
+      subtitle: 'Deterministic Safety Engine',
+      tag: 'Governance',
       color: '#10b981',
       accentGradient: 'linear-gradient(90deg, #10b981, #06b6d4)',
       description:
-        'Executes zero-touch token charges or dispatches customized, high-converting payment links via Resend API and Razorpay Auto-Notify without disturbing the user.',
+        'Hard business rules enforce merchant velocity limits, customer communication opt-outs, and transaction ceilings.',
     },
     {
       num: '06',
@@ -183,47 +185,56 @@ export default function LandingPage() {
     {
       id: 'h1',
       num: '01',
-      title: 'Zero-Touch Mandates',
-      desc: 'Recover failed subscriptions and recurring autopay mandates automatically using stored RBI-compliant tokens without customer friction.',
+      title: '1-Command Razorpay Layer',
+      desc: 'Plug AI payment recovery directly into your existing Razorpay setup with `npx reviveos init`. Normal payments never get proxied.',
+      gradient: 'linear-gradient(135deg, #082436 0%, #03101c 100%)',
+      accent: '#38bdf8',
+      icon: <Zap size={18} color="#38bdf8" />,
+    },
+    {
+      id: 'h2',
+      num: '02',
+      title: 'ML Fraud & Revenue Risk Guard',
+      desc: 'Random Forest and Gradient Boosting models evaluate fraud probability and return risk to block bad actors before retrying.',
+      gradient: 'linear-gradient(135deg, #361a08 0%, #1a0b02 100%)',
+      accent: '#f59e0b',
+      icon: <ShieldCheck size={18} color="#f59e0b" />,
+    },
+    {
+      id: 'h3',
+      num: '03',
+      title: 'Zero-Touch Token Retries',
+      desc: 'Recover failed subscriptions and recurring autopay automatically using stored RBI-compliant tokens on optimal bank switch timings.',
       gradient: 'linear-gradient(135deg, #1e0836 0%, #0c0418 100%)',
       accent: '#c084fc',
       icon: <RefreshCw size={18} color="#c084fc" />,
     },
     {
-      id: 'h2',
-      num: '02',
-      title: 'Smart Fallback Links',
-      desc: 'Generate direct 1-click payment links with custom branded checkout pages delivered straight via Resend email and WhatsApp.',
-      gradient: 'linear-gradient(135deg, #082436 0%, #03101c 100%)',
-      accent: '#38bdf8',
-      icon: <Mail size={18} color="#38bdf8" />,
-    },
-    {
-      id: 'h3',
-      num: '03',
-      title: 'DeepSeek-R1 Engine',
-      desc: 'LLM reasoning selects the highest-yield recovery pathway tailored to customer behavior and merchant business category.',
-      gradient: 'linear-gradient(135deg, #36081e 0%, #1c030f 100%)',
-      accent: '#ec4899',
-      icon: <Cpu size={18} color="#ec4899" />,
-    },
-    {
       id: 'h4',
       num: '04',
-      title: 'SHA-256 Ledger',
-      desc: 'Immutable audit trail for complete financial compliance. Every state transition is cryptographically signed and hash-chained.',
-      gradient: 'linear-gradient(135deg, #08361e 0%, #031a0e 100%)',
-      accent: '#10b981',
-      icon: <ShieldCheck size={18} color="#10b981" />,
+      title: 'Smart Fallback Links',
+      desc: 'Generate direct 1-click payment links with custom branded checkout pages delivered straight via Resend email and WhatsApp.',
+      gradient: 'linear-gradient(135deg, #36081e 0%, #1c030f 100%)',
+      accent: '#ec4899',
+      icon: <Mail size={18} color="#ec4899" />,
     },
     {
       id: 'h5',
       num: '05',
-      title: 'Payday Optimization',
-      desc: 'ML predictive scheduler identifies optimal customer salary and bank switch availability windows before triggering retries.',
-      gradient: 'linear-gradient(135deg, #2b1d06 0%, #140d02 100%)',
-      accent: '#f59e0b',
-      icon: <TrendingUp size={18} color="#f59e0b" />,
+      title: 'Customer Recovery Memory',
+      desc: 'Closed-loop calibration tracks customer-specific payment behavior, preferred methods, and historical recovery latency.',
+      gradient: 'linear-gradient(135deg, #08361e 0%, #031a0e 100%)',
+      accent: '#10b981',
+      icon: <Cpu size={18} color="#10b981" />,
+    },
+    {
+      id: 'h6',
+      num: '06',
+      title: 'SHA-256 Audit Ledger',
+      desc: 'Immutable cryptographic audit trail for complete financial compliance. Every state transition is hash-chained.',
+      gradient: 'linear-gradient(135deg, #1a0836 0%, #0d031c 100%)',
+      accent: '#8b5cf6',
+      icon: <Lock size={18} color="#8b5cf6" />,
     },
   ];
 
@@ -258,6 +269,7 @@ export default function LandingPage() {
           <nav style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
             {[
               { label: 'Pipeline', href: '#pipeline' },
+              { label: 'Documentation', href: '/docs' },
               { label: 'Capabilities', href: '#features' },
               { label: 'Simulator', href: '#simulator' },
               { label: 'ROI Estimator', href: '#calculator' },
@@ -283,9 +295,10 @@ export default function LandingPage() {
             {/* Dark / Light / System Mode Switcher */}
             <ThemeToggle />
 
-            <Link href="/login">
-              <button className="btn-ghost" style={{ padding: '7px 16px', fontSize: '13px' }}>
-                Sign In
+            <Link href="/developer">
+              <button className="btn-ghost" style={{ padding: '7px 14px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Code2 size={14} color="var(--color-accent-blue)" />
+                <span>SDK / CLI</span>
               </button>
             </Link>
             <Link href="/merchant">
@@ -308,22 +321,25 @@ export default function LandingPage() {
         <TechnicalPipelineDiagram />
       </div>
 
-      {/* 7. KINETIC MARQUEE RIBBONS */}
+      {/* 7. DEVELOPER PLATFORM & 1-COMMAND SDK INTEGRATION DOCS */}
+      <DeveloperDocsSection />
+
+      {/* 8. KINETIC MARQUEE RIBBONS */}
       <KineticMarquee />
 
-      {/* 8. HORIZONTAL FEATURE CAROUSEL SLIDER (Smooth & No Black Void) */}
+      {/* 9. HORIZONTAL FEATURE CAROUSEL SLIDER (Smooth & No Black Void) */}
       <div id="features">
         <HorizontalScrollSection
           cards={horizontalCards}
-          heading="Engineered for Zero Churn"
-          subheading="Explore ReviveOS high-assurance payment recovery infrastructure."
+          heading="Built for Zero Involuntary Churn"
+          subheading="Explore ReviveOS autonomous payment recovery and ML fraud protection infrastructure."
         />
       </div>
 
-      {/* 9. 3D PARTICLE MORPHING / GENERATIVE FLOW FIELD & CONSTELLATION NETWORK */}
+      {/* 10. 3D PARTICLE MORPHING / GENERATIVE FLOW FIELD & CONSTELLATION NETWORK */}
       <ParticleMorphingSection />
 
-      {/* 10. INTERACTIVE LIVE SIMULATOR (Medium/Compact Size) */}
+      {/* 11. INTERACTIVE LIVE SIMULATOR (Medium/Compact Size) */}
       <section
         id="simulator"
         style={{

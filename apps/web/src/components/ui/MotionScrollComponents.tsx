@@ -583,6 +583,19 @@ export function KineticMarquee() {
                 fontSize: 'clamp(36px, 6vw, 76px)',
                 fontWeight: 900,
                 letterSpacing: '-2px',
+                background: 'linear-gradient(90deg, #f59e0b, #ef4444)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              ML FRAUD DETECTION
+            </span>
+            <span style={{ fontSize: '22px', color: '#f59e0b' }}>✦</span>
+            <span
+              style={{
+                fontSize: 'clamp(36px, 6vw, 76px)',
+                fontWeight: 900,
+                letterSpacing: '-2px',
                 background: 'linear-gradient(90deg, #c084fc, #ec4899)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
@@ -624,6 +637,19 @@ export function KineticMarquee() {
               68.4% CAPTURED
             </span>
             <span style={{ fontSize: '22px', color: '#38bdf8' }}>✦</span>
+            <span
+              style={{
+                fontSize: 'clamp(36px, 6vw, 76px)',
+                fontWeight: 900,
+                letterSpacing: '-2px',
+                background: 'linear-gradient(90deg, #f59e0b, #d97706)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              RANDOM FOREST RISK GUARD
+            </span>
+            <span style={{ fontSize: '22px', color: '#f59e0b' }}>✦</span>
             <span
               style={{
                 fontSize: 'clamp(36px, 6vw, 76px)',
