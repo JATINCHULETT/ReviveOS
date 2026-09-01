@@ -537,16 +537,17 @@ export function TextScrubReveal({ text }: { text: string }) {
           const start = idx / words.length;
           const end = (idx + 1) / words.length;
           // eslint-disable-next-line react-hooks/rules-of-hooks
-          const opacity = useTransform(scrollYProgress, [start, end], [0.15, 1]);
-          // eslint-disable-next-line react-hooks/rules-of-hooks
-          const color = useTransform(
-            scrollYProgress,
-            [start, end],
-            ['#52525b', idx % 4 === 0 ? '#ec4899' : idx % 3 === 0 ? '#c084fc' : 'var(--text-primary)']
-          );
+          const opacity = useTransform(scrollYProgress, [start, end], [0.18, 1]);
 
           return (
-            <motion.span key={idx} style={{ opacity, color, display: 'inline-block' }}>
+            <motion.span
+              key={idx}
+              style={{
+                opacity,
+                color: idx % 4 === 0 ? 'var(--color-pink)' : idx % 3 === 0 ? 'var(--color-accent-light)' : 'var(--text-primary)',
+                display: 'inline-block',
+              }}
+            >
               {word}
             </motion.span>
           );
