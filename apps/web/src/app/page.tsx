@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   ExternalLink,
   Code2,
+  Check,
 } from 'lucide-react';
 import {
   ScrollProgressBar,
@@ -295,15 +296,9 @@ export default function LandingPage() {
             {/* Dark / Light / System Mode Switcher */}
             <ThemeToggle />
 
-            <Link href="/developer">
-              <button className="btn-ghost" style={{ padding: '7px 14px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Code2 size={14} color="var(--color-accent-blue)" />
-                <span>SDK / CLI</span>
-              </button>
-            </Link>
-            <Link href="/merchant">
-              <button className="btn-primary" style={{ padding: '7px 18px', fontSize: '13px' }}>
-                Merchant Portal <ArrowRight size={13} />
+            <Link href="/login">
+              <button className="btn-primary" style={{ padding: '7px 14px', fontSize: '13px' }}>
+                Sign In <ArrowRight size={13} />
               </button>
             </Link>
           </div>
@@ -532,8 +527,8 @@ export default function LandingPage() {
 
                   {/* Step 5 */}
                   <div style={{ display: 'flex', gap: '10px', opacity: simStage >= 5 ? 1 : 0.25, transition: 'opacity 0.3s' }}>
-                    <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: simStage >= 5 ? '#10b981' : 'var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800, flexShrink: 0, color: '#fff' }}>
-                      ✓
+                    <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: simStage >= 5 ? 'var(--color-emerald)' : 'var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800, flexShrink: 0, color: '#fff' }}>
+                      <Check size={13} strokeWidth={3} />
                     </div>
                     <div>
                       <div style={{ fontWeight: 700, fontSize: '13px', color: simStage >= 5 ? '#10b981' : 'var(--text-primary)' }}>
@@ -697,14 +692,10 @@ export default function LandingPage() {
           <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', flexWrap: 'wrap' }}>
             <Link href="/login">
               <button className="btn-primary" style={{ padding: '12px 28px', fontSize: '14px' }}>
-                Launch Merchant Portal <ArrowRight size={14} />
+                Launch ReviveOS <ArrowRight size={14} />
               </button>
             </Link>
-            <Link href="/login">
-              <button className="btn-ghost" style={{ padding: '12px 24px', fontSize: '14px' }}>
-                View Admin Hub
-              </button>
-            </Link>
+
           </div>
         </div>
       </section>
