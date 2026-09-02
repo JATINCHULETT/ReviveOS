@@ -193,16 +193,18 @@ func VoiceRecoveryHandler(pool *pgxpool.Pool) http.HandlerFunc {
 				`, callReq.Phone, callReq.CustomerName, callReq.Amount, callReq.Currency, providerName, result.CallSID,
 					result.Status, result.DurationSec, script, result.CustomerSpoken, string(result.Intent), ptpID)
 
-				// Lodge into recovery_workflows audit log if customer exists
-				var wfID string
-				_ = pool.QueryRow(r.Context(), `
-					SELECT rw.id::text 
-					FROM recovery_workflows rw
-					JOIN payments p ON rw.payment_id = p.id
-					JOIN customers c ON p.customer_id = c.id
-					WHERE c.phone = $1 OR c.email = $2
-					ORDER BY rw.created_at DESC LIMIT 1
-				`, callReq.Phone, callReq.CustomerEmail).Scan(&wfID)
+				// Lodge into recovery_workflows audit log if workflow_id provided or customer exists
+				wfID := strings.TrimSpace(callReq.WorkflowID)
+				if wfID == "" {
+					_ = pool.QueryRow(r.Context(), `
+						SELECT rw.id::text 
+						FROM recovery_workflows rw
+						JOIN payments p ON rw.payment_id = p.id
+						JOIN customers c ON p.customer_id = c.id
+						WHERE c.phone = $1 OR c.email = $2
+						ORDER BY rw.created_at DESC LIMIT 1
+					`, callReq.Phone, callReq.CustomerEmail).Scan(&wfID)
+				}
 
 				if wfID != "" {
 					// Add action and audit trail

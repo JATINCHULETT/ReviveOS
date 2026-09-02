@@ -43,6 +43,7 @@ export default function VoiceRecoveryPage() {
 
   // Custom Dial Modal State
   const [showDialModal, setShowDialModal] = useState(false);
+  const [customWorkflowId, setCustomWorkflowId] = useState('');
   const [customName, setCustomName] = useState('Rajesh Sharma');
   const [customEmail, setCustomEmail] = useState('rajesh.sharma@example.com');
   const [customPhone, setCustomPhone] = useState('+919876543210');
@@ -86,6 +87,7 @@ export default function VoiceRecoveryPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          workflow_id: customWorkflowId.trim() || undefined,
           customer_name: customName || 'Valued Customer',
           customer_email: customEmail,
           phone: customPhone,
@@ -184,6 +186,31 @@ export default function VoiceRecoveryPage() {
             </div>
 
             <form onSubmit={triggerCallSimulation} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Target Workflow ID (Optional / Direct Ledger Link)
+                </label>
+                <input
+                  type="text"
+                  value={customWorkflowId}
+                  onChange={(e) => setCustomWorkflowId(e.target.value)}
+                  placeholder="e.g. wf_esc_revive_101 or UUID"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-subtle)',
+                    color: 'var(--text-primary)',
+                    fontSize: '13.5px',
+                    fontFamily: 'monospace',
+                  }}
+                />
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                  Provide a workflow ID to directly lodge this call and replies into that specific workflow timeline.
+                </span>
+              </div>
+
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
                   Target Customer Name

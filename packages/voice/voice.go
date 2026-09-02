@@ -26,6 +26,7 @@ const (
 
 // CallPayload represents parameters for initiating a Hinglish AI Voice call
 type CallPayload struct {
+	WorkflowID    string    `json:"workflow_id,omitempty"`
 	MerchantID    string    `json:"merchant_id"`
 	CustomerID    string    `json:"customer_id"`
 	CustomerName  string    `json:"customer_name"`
