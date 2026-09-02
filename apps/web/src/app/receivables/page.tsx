@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Building2, AlertCircle, Send, CheckCircle2, Clock, Calendar, ArrowUpRight } from 'lucide-react';
 import { BadgePulse } from '@/components/ui/AnimatedComponents';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
 export default function ReceivablesPage() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>(null);
@@ -12,7 +14,7 @@ export default function ReceivablesPage() {
 
   const fetchReceivables = async () => {
     try {
-      const res = await fetch('http://localhost:8080/v1/receivables');
+      const res = await fetch(`${API_BASE}/v1/receivables`);
       if (res.ok) {
         const data = await res.json();
         setInvoices(data.invoices || []);
@@ -78,7 +80,7 @@ export default function ReceivablesPage() {
 
   const triggerDunning = async (invId: string) => {
     try {
-      const res = await fetch('http://localhost:8080/v1/receivables/dunning/trigger', {
+      const res = await fetch(`${API_BASE}/v1/receivables/dunning/trigger`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ invoice_id: invId }),

@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { PhoneCall, Play, Mic, CheckCircle2, UserCheck, MessageSquare, Volume2, Shield } from 'lucide-react';
 import { BadgePulse } from '@/components/ui/AnimatedComponents';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
 export default function VoiceRecoveryPage() {
   const [calls, setCalls] = useState<any[]>([]);
   const [preview, setPreview] = useState<any>(null);
@@ -13,8 +15,8 @@ export default function VoiceRecoveryPage() {
   const fetchVoiceData = async () => {
     try {
       const [callsRes, previewRes] = await Promise.all([
-        fetch('http://localhost:8080/v1/voice'),
-        fetch('http://localhost:8080/v1/voice/scripts/preview'),
+        fetch(`${API_BASE}/v1/voice`),
+        fetch(`${API_BASE}/v1/voice/scripts/preview`),
       ]);
       if (callsRes.ok) {
         const d = await callsRes.json();
@@ -69,7 +71,7 @@ export default function VoiceRecoveryPage() {
     setCalling(true);
     setCallStatus('Initiating live call via Twilio Telephony Gateway...');
     try {
-      const res = await fetch('http://localhost:8080/v1/voice', {
+      const res = await fetch(`${API_BASE}/v1/voice`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

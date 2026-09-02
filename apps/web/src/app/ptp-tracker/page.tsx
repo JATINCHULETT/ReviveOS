@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Calendar, Clock, AlertTriangle, CheckCircle2, User, RefreshCw } from 'lucide-react';
 import { BadgePulse } from '@/components/ui/AnimatedComponents';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
 export default function PTPTrackerPage() {
   const [promises, setPromises] = useState<any[]>([]);
   const [metrics, setMetrics] = useState<any>(null);
@@ -12,7 +14,7 @@ export default function PTPTrackerPage() {
 
   const fetchPTP = async () => {
     try {
-      const res = await fetch('http://localhost:8080/v1/ptp');
+      const res = await fetch(`${API_BASE}/v1/ptp`);
       if (res.ok) {
         const data = await res.json();
         setPromises(data.promises || []);
@@ -69,7 +71,7 @@ export default function PTPTrackerPage() {
 
   const verifyPayment = async (promiseId: string) => {
     try {
-      const res = await fetch('http://localhost:8080/v1/ptp/verify', {
+      const res = await fetch(`${API_BASE}/v1/ptp/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ promise_id: promiseId, is_paid: true }),
@@ -87,7 +89,7 @@ export default function PTPTrackerPage() {
 
   const extendPromise = async (promiseId: string) => {
     try {
-      const res = await fetch('http://localhost:8080/v1/ptp/extend', {
+      const res = await fetch(`${API_BASE}/v1/ptp/extend`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ promise_id: promiseId, days: 3 }),

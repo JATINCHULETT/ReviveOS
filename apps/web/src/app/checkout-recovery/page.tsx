@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { ShoppingCart, RefreshCw, Send, CheckCircle2, ArrowRight, Clock, AlertTriangle } from 'lucide-react';
 import { BadgePulse } from '@/components/ui/AnimatedComponents';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
 export default function CheckoutRecoveryPage() {
   const [sessions, setSessions] = useState<any[]>([]);
   const [funnel, setFunnel] = useState<any>(null);
@@ -12,7 +14,7 @@ export default function CheckoutRecoveryPage() {
 
   const fetchCheckoutData = async () => {
     try {
-      const res = await fetch('http://localhost:8080/v1/checkout');
+      const res = await fetch(`${API_BASE}/v1/checkout`);
       if (res.ok) {
         const d = await res.json();
         setSessions(d.sessions || []);
@@ -75,7 +77,7 @@ export default function CheckoutRecoveryPage() {
 
   const dispatchRecovery = async (token: string) => {
     try {
-      const res = await fetch('http://localhost:8080/v1/checkout/recover', {
+      const res = await fetch(`${API_BASE}/v1/checkout/recover`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_token: token, channel: 'EMAIL' }),
