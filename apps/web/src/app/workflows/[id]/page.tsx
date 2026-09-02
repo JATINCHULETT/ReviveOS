@@ -56,6 +56,56 @@ export default function WorkflowDetailPage() {
       setLoading(true);
       setError(null);
       const res = await getWorkflowDetail(workflowId);
+
+      // Merge client voice call dispatches (both live and synthetic)
+      try {
+        const stored = typeof window !== 'undefined' ? localStorage.getItem('revive_voice_dispatches') : null;
+        if (stored) {
+          const dispatches = JSON.parse(stored);
+          const currentPhone = res.workflow?.customer_phone;
+          const currentEmail = res.workflow?.customer_email;
+          const matchingCalls = dispatches.filter((call: any) =>
+            call.workflow_id === workflowId ||
+            (currentPhone && call.phone === currentPhone) ||
+            (currentEmail && call.customer_email === currentEmail)
+          );
+
+          if (matchingCalls.length > 0) {
+            const voiceActions = matchingCalls.map((call: any) => ({
+              id: `act_${call.call_sid}`,
+              action_type: 'VOICE_RECOVERY_CALL',
+              status: call.status || 'EXECUTED',
+              attempt: 1,
+              executed_at: call.timestamp,
+              result: `Hinglish Call [${call.call_sid}] dispatched to ${call.phone}. Intent: ${call.intent}. Transcribed: "${call.customer_spoken}"`,
+              created_at: call.timestamp,
+            }));
+
+            const voiceAudits = matchingCalls.map((call: any) => ({
+              id: `aud_${call.call_sid}`,
+              event_id: `ev_${call.call_sid}`,
+              actor: 'system:voice_agent:twilio',
+              action: 'VOICE_CALL_DISPATCHED',
+              timestamp: call.timestamp,
+              payload_hash: `sha256_${call.call_sid.slice(0, 16)}`,
+              event_hash: `0x${call.call_sid.replace(/[^a-fA-F0-9]/g, 'a').slice(0, 24)}...`,
+              metadata: {
+                phone: call.phone,
+                customer_name: call.customer_name,
+                call_sid: call.call_sid,
+                intent: call.intent,
+                spoken_response: call.customer_spoken,
+              },
+            }));
+
+            res.recovery_actions = [...voiceActions, ...(res.recovery_actions || [])];
+            res.audit_events = [...voiceAudits, ...(res.audit_events || [])];
+          }
+        }
+      } catch (err) {
+        console.warn('Error merging voice dispatches into workflow detail:', err);
+      }
+
       setDetail(res);
       if (res.workflow?.selected_action) {
         setSelectedStrategy(res.workflow.selected_action);

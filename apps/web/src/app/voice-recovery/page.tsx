@@ -111,6 +111,7 @@ export default function VoiceRecoveryPage() {
     setShowDialModal(false);
     setCallStatus(`Initiating live Hinglish call via Twilio to ${customPhone} (${customName})...`);
     try {
+      const amtNum = parseFloat(customAmount) || 14999;
       const res = await fetch(`${API_BASE}/v1/voice`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -119,13 +120,39 @@ export default function VoiceRecoveryPage() {
           customer_name: customName || 'Valued Customer',
           customer_email: customEmail,
           phone: customPhone,
-          amount: parseFloat(customAmount) || 14999,
+          amount: amtNum,
           currency: 'INR',
         }),
       });
       if (res.ok) {
         const data = await res.json();
-        setCallStatus(`Twilio Call (${data.call_result?.call_sid}) dispatched to ${customPhone} with intent: ${data.call_result?.intent || 'PROMISE_TO_PAY'}`);
+        const callRes = data.call_result || {};
+        const callSid = callRes.call_sid || `call_live_${Date.now()}`;
+        const intent = callRes.intent || 'PROMISE_TO_PAY';
+        const spoken = callRes.customer_spoken || 'Customer speech processing via Twilio Gather';
+
+        // Lodge dispatch into client localStorage so workflow detail view can display it instantly
+        try {
+          const stored = localStorage.getItem('revive_voice_dispatches');
+          const dispatches = stored ? JSON.parse(stored) : [];
+          dispatches.unshift({
+            call_sid: callSid,
+            workflow_id: customWorkflowId.trim() || undefined,
+            customer_name: customName,
+            customer_email: customEmail,
+            phone: customPhone,
+            amount: amtNum,
+            status: 'EXECUTED',
+            intent: intent,
+            customer_spoken: spoken,
+            timestamp: new Date().toISOString(),
+          });
+          localStorage.setItem('revive_voice_dispatches', JSON.stringify(dispatches.slice(0, 50)));
+        } catch (storageErr) {
+          console.error('Failed to store voice dispatch in localStorage:', storageErr);
+        }
+
+        setCallStatus(`Twilio Call (${callSid}) dispatched to ${customPhone} with intent: ${intent}`);
         await fetchVoiceData();
       } else {
         const errData = await res.json().catch(() => ({}));
@@ -434,7 +461,9 @@ export default function VoiceRecoveryPage() {
             color: 'var(--text-primary)',
             fontStyle: 'italic',
           }}>
-            "{preview?.hinglish_script || 'Namaste Rajesh ji! Main ReviveOS Payments Desk se baat kar raha hoon...'}"
+            {customName || customAmount
+              ? `\"Namaste ${customName || 'Aman Gupta'} ji! Main ReviveOS Payments Desk se baat kar raha hoon. Aapka ₹${customAmount || '14999'} ka payment due tha jo abhi tak process nahi ho paaya. Kya aap abhi WhatsApp ya SMS pe instant payment link chahenge, ya fir koi date schedule karni hai?\"`
+              : `\"${preview?.hinglish_script || 'Namaste Aman Gupta ji! Main ReviveOS Payments Desk se baat kar raha hoon. Aapka ₹14999 ka payment due tha jo abhi tak process nahi ho paaya. Kya aap abhi WhatsApp ya SMS pe instant payment link chahenge, ya fir koi date schedule karni hai?'}\"`}
           </p>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '12px' }}>
             Tone: Empathetic & Respectful | Latency: ~450ms | Language: Indian Hinglish

@@ -140,7 +140,13 @@ func (t *TwilioVoiceProvider) InitiateCall(ctx context.Context, payload CallPayl
 	form.Set("From", caller)
 	form.Set("To", targetNumber)
 	// Dynamic TwiML speaking the vernacular Hinglish script
-	twimlContent := fmt.Sprintf("<Response><Say language=\"hi-IN\" voice=\"Polly.Aditi\">%s</Say></Response>", script)
+	twimlContent := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+	<Gather input="speech" language="hi-IN" speechTimeout="auto" action="/v1/voice/webhook/incoming" method="POST">
+		<Say language="hi-IN" voice="Polly.Aditi">%s</Say>
+	</Gather>
+	<Say language="hi-IN" voice="Polly.Aditi">Aapka koi response receive nahi hua. ReviveOS ki ore se dhanyawad.</Say>
+</Response>`, script)
 	form.Set("Twiml", twimlContent)
 
 	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, strings.NewReader(form.Encode()))

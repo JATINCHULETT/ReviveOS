@@ -21,10 +21,21 @@ func VoiceRecoveryHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		case http.MethodGet:
 			// List voice recovery call history & preview scripts
 			if strings.HasSuffix(r.URL.Path, "/scripts/preview") {
+				name := r.URL.Query().Get("customer_name")
+				if name == "" {
+					name = "Aman Gupta"
+				}
+				amount := 14999.0
+				if amtStr := r.URL.Query().Get("amount"); amtStr != "" {
+					var parsed float64
+					if _, err := fmt.Sscanf(amtStr, "%f", &parsed); err == nil && parsed > 0 {
+						amount = parsed
+					}
+				}
 				payload := voice.CallPayload{
-					CustomerName: "Aman Gupta",
+					CustomerName: name,
 					Phone:        "+919876543210",
-					Amount:       14999,
+					Amount:       amount,
 					Currency:     "INR",
 					DueDate:      time.Now().Add(-3 * 24 * time.Hour),
 				}
@@ -195,6 +206,8 @@ func VoiceRecoveryHandler(pool *pgxpool.Pool) http.HandlerFunc {
 
 				// Lodge into recovery_workflows audit log if workflow_id provided or customer exists
 				wfID := strings.TrimSpace(callReq.WorkflowID)
+				// Check if wfID is a valid Postgres UUID (36 chars with dashes)
+				isValidUUID := len(wfID) == 36 && strings.Count(wfID, "-") == 4
 				if wfID == "" {
 					_ = pool.QueryRow(r.Context(), `
 						SELECT rw.id::text 
@@ -204,9 +217,12 @@ func VoiceRecoveryHandler(pool *pgxpool.Pool) http.HandlerFunc {
 						WHERE c.phone = $1 OR c.email = $2
 						ORDER BY rw.created_at DESC LIMIT 1
 					`, callReq.Phone, callReq.CustomerEmail).Scan(&wfID)
+					if wfID != "" {
+						isValidUUID = true
+					}
 				}
 
-				if wfID != "" {
+				if isValidUUID && wfID != "" {
 					// Add action and audit trail
 					_, _ = pool.Exec(r.Context(), `
 						INSERT INTO recovery_actions (workflow_id, action_type, status, attempt, result, executed_at)
