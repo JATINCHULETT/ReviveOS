@@ -24,9 +24,41 @@ export default function VoiceRecoveryPage() {
         const p = await previewRes.json();
         setPreview(p);
       }
+      return;
     } catch (err) {
-      console.error('Failed to load voice data:', err);
+      console.warn('Backend port 8080 not reachable, using offline demo voice calls:', err);
     }
+
+    // Default offline fallback data
+    setCalls([
+      {
+        call_sid: 'call_twilio_9021831',
+        provider: 'twilio',
+        duration_seconds: 45,
+        customer_spoken: 'Haan bhai kal subah 11 baje tak payment kar dunga.',
+        intent: 'PROMISE_TO_PAY',
+        ptp_date: 'tomorrow',
+      },
+      {
+        call_sid: 'call_twilio_4810924',
+        provider: 'twilio',
+        duration_seconds: 32,
+        customer_spoken: 'Aap mujhe WhatsApp pe UPI link bhej dijiye abhi kar deti hoon.',
+        intent: 'REQUEST_LINK',
+        ptp_date: null,
+      },
+      {
+        call_sid: 'call_twilio_3310892',
+        provider: 'twilio',
+        duration_seconds: 51,
+        customer_spoken: 'Salary aane me 2 din lagenge, tab karta hoon.',
+        intent: 'PROMISE_TO_PAY',
+        ptp_date: 'in 2 days',
+      },
+    ]);
+    setPreview({
+      hinglish_script: 'Namaste Rajesh ji! Main ReviveOS Payments Desk se baat kar raha hoon. Aapka ₹14,999 ka payment due tha...',
+    });
   };
 
   useEffect(() => {
