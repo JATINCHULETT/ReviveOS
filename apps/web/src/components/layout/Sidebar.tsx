@@ -42,6 +42,10 @@ export default function Sidebar() {
   const navItems = [
     { label: 'Analytics', href: '/analytics', icon: BarChart3 },
     { label: 'Workflows', href: '/workflows', icon: GitBranch },
+    { label: 'B2B Receivables', href: '/receivables', icon: Building2 },
+    { label: 'Hinglish AI Voice', href: '/voice-recovery', icon: Zap },
+    { label: 'PTP Tracker', href: '/ptp-tracker', icon: ShieldCheck },
+    { label: 'Checkout Recovery', href: '/checkout-recovery', icon: LayoutDashboard },
     { label: 'Customers & Retries', href: '/merchant', icon: Users },
     { label: 'Developer & SDK', href: '/developer', icon: Terminal },
     { label: 'Documentation', href: '/docs', icon: BookOpen },
