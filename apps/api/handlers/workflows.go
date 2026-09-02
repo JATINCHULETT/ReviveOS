@@ -209,8 +209,12 @@ func WorkflowsHandler(pool *pgxpool.Pool) http.HandlerFunc {
 }
 
 func listWorkflows(ctx context.Context, pool *pgxpool.Pool, w http.ResponseWriter, r *http.Request) {
-	// Automatically pull and sync payment links from Razorpay
-	_ = paymentprovider.SyncRazorpayPaymentLinks(ctx, pool)
+	// Sync Razorpay payment links in background so queries return in <10ms
+	go func() {
+		bgCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		_ = paymentprovider.SyncRazorpayPaymentLinks(bgCtx, pool)
+	}()
 
 	query := r.URL.Query()
 
@@ -759,7 +763,11 @@ type InterventionItem struct {
 }
 
 func getInterventions(ctx context.Context, pool *pgxpool.Pool, w http.ResponseWriter, r *http.Request) {
-	_ = paymentprovider.SyncRazorpayPaymentLinks(ctx, pool)
+	go func() {
+		bgCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		_ = paymentprovider.SyncRazorpayPaymentLinks(bgCtx, pool)
+	}()
 
 	merchantFilter := r.URL.Query().Get("merchant_id")
 	whereClause := "WHERE rw.status IN ('ESCALATED', 'REQUIRES_HUMAN_REVIEW')"
