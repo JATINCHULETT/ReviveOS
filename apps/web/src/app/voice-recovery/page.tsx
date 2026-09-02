@@ -6,11 +6,47 @@ import { BadgePulse } from '@/components/ui/AnimatedComponents';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
+const DEMO_VOICE_LOGS = [
+  {
+    call_sid: 'call_twilio_9021831',
+    provider: 'twilio',
+    duration_seconds: 45,
+    customer_spoken: 'Haan bhai kal subah 11 baje tak payment kar dunga.',
+    intent: 'PROMISE_TO_PAY',
+    ptp_date: 'tomorrow',
+  },
+  {
+    call_sid: 'call_twilio_4810924',
+    provider: 'twilio',
+    duration_seconds: 32,
+    customer_spoken: 'Aap mujhe WhatsApp pe UPI link bhej dijiye abhi kar deti hoon.',
+    intent: 'REQUEST_LINK',
+    ptp_date: null,
+  },
+  {
+    call_sid: 'call_twilio_3310892',
+    provider: 'twilio',
+    duration_seconds: 51,
+    customer_spoken: 'Salary aane me 2 din lagenge, tab karta hoon.',
+    intent: 'PROMISE_TO_PAY',
+    ptp_date: 'in 2 days',
+  },
+];
+
 export default function VoiceRecoveryPage() {
-  const [calls, setCalls] = useState<any[]>([]);
-  const [preview, setPreview] = useState<any>(null);
+  const [calls, setCalls] = useState<any[]>(DEMO_VOICE_LOGS);
+  const [preview, setPreview] = useState<any>({
+    hinglish_script: 'Namaste Rajesh ji! Main ReviveOS Payments Desk se baat kar raha hoon. Aapka ₹14,999 ka payment due tha...',
+  });
   const [calling, setCalling] = useState(false);
   const [callStatus, setCallStatus] = useState<string | null>(null);
+
+  // Custom Dial Modal State
+  const [showDialModal, setShowDialModal] = useState(false);
+  const [customName, setCustomName] = useState('Rajesh Sharma');
+  const [customEmail, setCustomEmail] = useState('rajesh.sharma@example.com');
+  const [customPhone, setCustomPhone] = useState('+919876543210');
+  const [customAmount, setCustomAmount] = useState('14999');
 
   const fetchVoiceData = async () => {
     try {
@@ -20,74 +56,53 @@ export default function VoiceRecoveryPage() {
       ]);
       if (callsRes.ok) {
         const d = await callsRes.json();
-        setCalls(d.calls || []);
+        const realCalls = d.calls || [];
+        // Merge real calls on top of demo calls, deduplicating by call_sid
+        const realSids = new Set(realCalls.map((c: any) => c.call_sid));
+        const merged = [...realCalls, ...DEMO_VOICE_LOGS.filter((demo) => !realSids.has(demo.call_sid))];
+        setCalls(merged);
       }
       if (previewRes.ok) {
         const p = await previewRes.json();
         setPreview(p);
       }
-      return;
     } catch (err) {
       console.warn('Backend port 8080 not reachable, using offline demo voice calls:', err);
+      setCalls(DEMO_VOICE_LOGS);
     }
-
-    // Default offline fallback data
-    setCalls([
-      {
-        call_sid: 'call_twilio_9021831',
-        provider: 'twilio',
-        duration_seconds: 45,
-        customer_spoken: 'Haan bhai kal subah 11 baje tak payment kar dunga.',
-        intent: 'PROMISE_TO_PAY',
-        ptp_date: 'tomorrow',
-      },
-      {
-        call_sid: 'call_twilio_4810924',
-        provider: 'twilio',
-        duration_seconds: 32,
-        customer_spoken: 'Aap mujhe WhatsApp pe UPI link bhej dijiye abhi kar deti hoon.',
-        intent: 'REQUEST_LINK',
-        ptp_date: null,
-      },
-      {
-        call_sid: 'call_twilio_3310892',
-        provider: 'twilio',
-        duration_seconds: 51,
-        customer_spoken: 'Salary aane me 2 din lagenge, tab karta hoon.',
-        intent: 'PROMISE_TO_PAY',
-        ptp_date: 'in 2 days',
-      },
-    ]);
-    setPreview({
-      hinglish_script: 'Namaste Rajesh ji! Main ReviveOS Payments Desk se baat kar raha hoon. Aapka ₹14,999 ka payment due tha...',
-    });
   };
 
   useEffect(() => {
     fetchVoiceData();
   }, []);
 
-  const triggerCallSimulation = async () => {
+  const triggerCallSimulation = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setCalling(true);
-    setCallStatus('Initiating live call via Twilio Telephony Gateway...');
+    setShowDialModal(false);
+    setCallStatus(`Initiating live Hinglish call via Twilio to ${customPhone} (${customName})...`);
     try {
       const res = await fetch(`${API_BASE}/v1/voice`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          customer_name: 'Rajesh Sharma',
-          phone: '+919876543210',
-          amount: 14999,
+          customer_name: customName || 'Valued Customer',
+          customer_email: customEmail,
+          phone: customPhone,
+          amount: parseFloat(customAmount) || 14999,
           currency: 'INR',
         }),
       });
       if (res.ok) {
         const data = await res.json();
-        setCallStatus(`Twilio Call (${data.call_result?.call_sid}) completed with intent: ${data.call_result?.intent || 'PROMISE_TO_PAY'}`);
-        fetchVoiceData();
+        setCallStatus(`Twilio Call (${data.call_result?.call_sid}) dispatched to ${customPhone} with intent: ${data.call_result?.intent || 'PROMISE_TO_PAY'}`);
+        await fetchVoiceData();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setCallStatus(`Twilio Call failed: ${errData.detail || errData.error || 'Server error'}`);
       }
-    } catch (err) {
-      setCallStatus('Call completed via Twilio');
+    } catch (err: any) {
+      setCallStatus(`Call error: ${err.message}`);
     } finally {
       setCalling(false);
     }
@@ -109,7 +124,7 @@ export default function VoiceRecoveryPage() {
         </div>
 
         <button
-          onClick={triggerCallSimulation}
+          onClick={() => setShowDialModal(true)}
           disabled={calling}
           style={{
             padding: '10px 20px',
@@ -126,9 +141,185 @@ export default function VoiceRecoveryPage() {
           }}
         >
           <PhoneCall size={16} />
-          {calling ? 'Calling Target...' : 'Test AI Hinglish Call'}
+          {calling ? 'Calling Target...' : 'Dial Custom Number (Hinglish)'}
         </button>
       </div>
+
+      {/* Interactive Dial Modal */}
+      {showDialModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.75)',
+          backdropFilter: 'blur(6px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px',
+        }}>
+          <div style={{
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '460px',
+            padding: '28px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <PhoneCall size={20} color="#3b82f6" />
+                <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>Trigger Live Hinglish Call</h3>
+              </div>
+              <button
+                onClick={() => setShowDialModal(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={triggerCallSimulation} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Target Customer Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  placeholder="e.g. Rajesh Sharma"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-subtle)',
+                    color: 'var(--text-primary)',
+                    fontSize: '13.5px',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Customer Email (Linked to Workflow Ledger)
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={customEmail}
+                  onChange={(e) => setCustomEmail(e.target.value)}
+                  placeholder="e.g. rajesh.sharma@example.com"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-subtle)',
+                    color: 'var(--text-primary)',
+                    fontSize: '13.5px',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Customer Mobile Number (E.164 format)
+                </label>
+                <input
+                  type="tel"
+                  required
+                  value={customPhone}
+                  onChange={(e) => setCustomPhone(e.target.value)}
+                  placeholder="+919876543210"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-subtle)',
+                    color: 'var(--text-primary)',
+                    fontSize: '13.5px',
+                  }}
+                />
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                  Twilio will initiate an outbound call and speak vernacular Hinglish script upon answer.
+                </span>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Pending Due Amount (₹ INR)
+                </label>
+                <input
+                  type="number"
+                  required
+                  value={customAmount}
+                  onChange={(e) => setCustomAmount(e.target.value)}
+                  placeholder="14999"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-subtle)',
+                    color: 'var(--text-primary)',
+                    fontSize: '13.5px',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowDialModal(false)}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    borderRadius: '8px',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-subtle)',
+                    color: 'var(--text-secondary)',
+                    fontWeight: 600,
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={calling}
+                  style={{
+                    flex: 2,
+                    padding: '10px',
+                    borderRadius: '8px',
+                    background: 'var(--primary)',
+                    border: 'none',
+                    color: '#fff',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <PhoneCall size={14} />
+                  <span>{calling ? 'Dialing...' : 'Place Hinglish Call'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {callStatus && (
         <div style={{

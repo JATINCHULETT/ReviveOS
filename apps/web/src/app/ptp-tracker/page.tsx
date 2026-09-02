@@ -6,8 +6,38 @@ import { BadgePulse } from '@/components/ui/AnimatedComponents';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
+const DEMO_PTP_PROMISES = [
+  {
+    id: 'ptp_881901',
+    customer_name: 'Manish Trivedi',
+    customer_contact: '+919820192831',
+    promised_amount: 18500,
+    promised_date: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+    status: 'PENDING',
+    recorded_channel: 'VOICE_AGENT (Hinglish)',
+  },
+  {
+    id: 'ptp_881902',
+    customer_name: 'Shreya Sen',
+    customer_contact: '+919711829301',
+    promised_amount: 6500,
+    promised_date: new Date(Date.now() - 12 * 3600 * 1000).toISOString(),
+    status: 'HONORED',
+    recorded_channel: 'WHATSAPP_LINK',
+  },
+  {
+    id: 'ptp_881903',
+    customer_name: 'Kunal Batra',
+    customer_contact: '+919833019284',
+    promised_amount: 32000,
+    promised_date: new Date(Date.now() + 72 * 3600 * 1000).toISOString(),
+    status: 'EXTENDED',
+    recorded_channel: 'VOICE_AGENT',
+  },
+];
+
 export default function PTPTrackerPage() {
-  const [promises, setPromises] = useState<any[]>([]);
+  const [promises, setPromises] = useState<any[]>(DEMO_PTP_PROMISES);
   const [metrics, setMetrics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
@@ -17,46 +47,19 @@ export default function PTPTrackerPage() {
       const res = await fetch(`${API_BASE}/v1/ptp`);
       if (res.ok) {
         const data = await res.json();
-        setPromises(data.promises || []);
+        const realPromises = data.promises || [];
+        const realIds = new Set(realPromises.map((p: any) => p.id));
+        const merged = [...realPromises, ...DEMO_PTP_PROMISES.filter((demo) => !realIds.has(demo.id))];
+        setPromises(merged);
         setMetrics(data.metrics || null);
         return;
       }
     } catch (err) {
       console.warn('Backend port 8080 not reachable, using offline demo PTP tracker:', err);
+      setPromises(DEMO_PTP_PROMISES);
     } finally {
       setLoading(false);
     }
-
-    // Default offline fallback data
-    setPromises([
-      {
-        id: 'ptp_881901',
-        customer_name: 'Manish Trivedi',
-        customer_contact: '+919820192831',
-        promised_amount: 18500,
-        promised_date: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
-        status: 'PENDING',
-        recorded_channel: 'VOICE_AGENT (Hinglish)',
-      },
-      {
-        id: 'ptp_881902',
-        customer_name: 'Shreya Sen',
-        customer_contact: '+919711829301',
-        promised_amount: 6500,
-        promised_date: new Date(Date.now() - 12 * 3600 * 1000).toISOString(),
-        status: 'HONORED',
-        recorded_channel: 'WHATSAPP_LINK',
-      },
-      {
-        id: 'ptp_881903',
-        customer_name: 'Kunal Batra',
-        customer_contact: '+919833019284',
-        promised_amount: 32000,
-        promised_date: new Date(Date.now() + 72 * 3600 * 1000).toISOString(),
-        status: 'EXTENDED',
-        recorded_channel: 'VOICE_AGENT',
-      },
-    ]);
     setMetrics({
       total_commitments: 3,
       committed_amount: 57000,

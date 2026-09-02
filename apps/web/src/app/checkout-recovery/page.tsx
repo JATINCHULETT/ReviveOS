@@ -6,8 +6,41 @@ import { BadgePulse } from '@/components/ui/AnimatedComponents';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
+const DEMO_CHECKOUT_SESSIONS = [
+  {
+    id: 'sess_01_a9f1',
+    session_token: 'tok_chk_99812401',
+    customer_name: 'Arjun Verma',
+    customer_email: 'arjun.verma@startup.co',
+    cart_amount: 12499,
+    step_reached: '3DS_INITIATED',
+    status: 'RECOVERY_DISPATCHED',
+    drop_off_reason: 'Bank OTP timeout / browser tab closed',
+  },
+  {
+    id: 'sess_02_b8e2',
+    session_token: 'tok_chk_88201944',
+    customer_name: 'Kavita Patel',
+    customer_email: 'kavita.p@fashionstore.in',
+    cart_amount: 4890,
+    step_reached: 'PAYMENT_STEP',
+    status: 'RECOVERED',
+    drop_off_reason: 'UPI intent app not installed on desktop',
+  },
+  {
+    id: 'sess_03_c7d3',
+    session_token: 'tok_chk_77192033',
+    customer_name: 'Deepak Chawla',
+    customer_email: 'deepak@chawlaenterprises.com',
+    cart_amount: 29500,
+    step_reached: 'DETAILS_ENTERED',
+    status: 'DROPPED_OFF',
+    drop_off_reason: 'Price sticker shock / exited tab',
+  },
+];
+
 export default function CheckoutRecoveryPage() {
-  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<any[]>(DEMO_CHECKOUT_SESSIONS);
   const [funnel, setFunnel] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [recoveryNotice, setRecoveryNotice] = useState<string | null>(null);
@@ -17,58 +50,28 @@ export default function CheckoutRecoveryPage() {
       const res = await fetch(`${API_BASE}/v1/checkout`);
       if (res.ok) {
         const d = await res.json();
-        setSessions(d.sessions || []);
+        const realSessions = d.sessions || [];
+        const realTokens = new Set(realSessions.map((s: any) => s.session_token));
+        const merged = [...realSessions, ...DEMO_CHECKOUT_SESSIONS.filter((demo) => !realTokens.has(demo.session_token))];
+        setSessions(merged);
         setFunnel(d.funnel || null);
         return;
       }
     } catch (err) {
-      console.warn('Backend port 8080 not reachable, using offline demo cart telemetry:', err);
+      console.warn('Backend not reachable, using offline demo cart telemetry:', err);
+      setSessions(DEMO_CHECKOUT_SESSIONS);
+      setFunnel({
+        total_sessions: 3,
+        dropped_off: 1,
+        recovery_dispatched: 1,
+        recovered: 1,
+        recovery_rate_pct: 33.3,
+        recoverable_value: 46889,
+        recovered_value: 4890,
+      });
     } finally {
       setLoading(false);
     }
-
-    // Default offline fallback data
-    setSessions([
-      {
-        id: 'sess_01_a9f1',
-        session_token: 'tok_chk_99812401',
-        customer_name: 'Arjun Verma',
-        customer_email: 'arjun.verma@startup.co',
-        cart_amount: 12499,
-        step_reached: '3DS_INITIATED',
-        status: 'RECOVERY_DISPATCHED',
-        drop_off_reason: 'Bank OTP timeout / browser tab closed',
-      },
-      {
-        id: 'sess_02_b8e2',
-        session_token: 'tok_chk_88201944',
-        customer_name: 'Kavita Patel',
-        customer_email: 'kavita.p@fashionstore.in',
-        cart_amount: 4890,
-        step_reached: 'PAYMENT_STEP',
-        status: 'RECOVERED',
-        drop_off_reason: 'UPI intent app not installed on desktop',
-      },
-      {
-        id: 'sess_03_c7d3',
-        session_token: 'tok_chk_77192033',
-        customer_name: 'Deepak Chawla',
-        customer_email: 'deepak@chawlaenterprises.com',
-        cart_amount: 29500,
-        step_reached: 'DETAILS_ENTERED',
-        status: 'DROPPED_OFF',
-        drop_off_reason: 'Price sticker shock / exited tab',
-      },
-    ]);
-    setFunnel({
-      total_sessions: 3,
-      dropped_off: 1,
-      recovery_dispatched: 1,
-      recovered: 1,
-      recovery_rate_pct: 33.3,
-      recoverable_value: 46889,
-      recovered_value: 4890,
-    });
   };
 
   useEffect(() => {
