@@ -81,5 +81,21 @@ func RegisterRoutes(pool *pgxpool.Pool) http.Handler {
 	mux.HandleFunc("/v1/customers/", APIKeyAuthMiddleware(pool, V1CustomerRecoveryProfileHandler(pool)))
 	mux.HandleFunc("/v1/keys", APIKeyAuthMiddleware(pool, V1APIKeysHandler(pool)))
 
+	// 9. B2B Receivables Chaser & Dunning
+	mux.HandleFunc("/v1/receivables", ReceivablesHandler(pool))
+	mux.HandleFunc("/v1/receivables/", ReceivablesHandler(pool))
+
+	// 10. Hinglish AI Voice Recovery Telephony
+	mux.HandleFunc("/v1/voice", VoiceRecoveryHandler(pool))
+	mux.HandleFunc("/v1/voice/", VoiceRecoveryHandler(pool))
+
+	// 11. Promise-to-Pay (PTP) Commitment Tracker
+	mux.HandleFunc("/v1/ptp", PTPHandler(pool))
+	mux.HandleFunc("/v1/ptp/", PTPHandler(pool))
+
+	// 12. Checkout Drop-off Recovery & Cart Telemetry
+	mux.HandleFunc("/v1/checkout", CheckoutDropoffHandler(pool))
+	mux.HandleFunc("/v1/checkout/", CheckoutDropoffHandler(pool))
+
 	return LoggingMiddleware(CORSMiddleware(mux))
 }
