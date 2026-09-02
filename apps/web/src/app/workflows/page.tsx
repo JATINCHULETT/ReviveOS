@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getWorkflows, getInterventions, approveWorkflow, rejectWorkflow } from '@/lib/api';
-import { getSyntheticWorkflows } from '@/lib/syntheticDataset';
+import { getSyntheticWorkflows, getSyntheticInterventions } from '@/lib/syntheticDataset';
 import { WorkflowSummary } from '@/lib/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { LoadingView, EmptyView, ErrorView } from '@/components/ui/StateViews';
@@ -11,7 +11,7 @@ import { RefreshCw, Search, Filter, ShieldAlert, CheckCircle, XCircle, UserCheck
 
 export default function WorkflowsPage() {
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>(() => getSyntheticWorkflows().slice(0, 50));
-  const [interventions, setInterventions] = useState<any[]>([]);
+  const [interventions, setInterventions] = useState<any[]>(() => getSyntheticInterventions());
   const [activeTab, setActiveTab] = useState<'ALL' | 'INTERVENTIONS'>('ALL');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,14 +26,19 @@ export default function WorkflowsPage() {
       const [wfRes, intRes] = await Promise.all([
         getWorkflows({
           status: statusFilter !== 'ALL' ? statusFilter : undefined,
-          limit: 50,
+          limit: 100,
         }),
         getInterventions(),
       ]);
-      setWorkflows(wfRes.data || wfRes.workflows || []);
-      setInterventions(intRes.data || []);
+
+      if (wfRes?.data && wfRes.data.length > 0) {
+        setWorkflows(wfRes.data);
+      }
+      if (intRes?.data && intRes.data.length > 0) {
+        setInterventions(intRes.data);
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch workflows');
+      console.warn('Backend query error, retaining baseline synthetic dataset:', err);
     } finally {
       setLoading(false);
     }

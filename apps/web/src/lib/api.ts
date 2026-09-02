@@ -88,14 +88,16 @@ export async function getWorkflows(params?: {
     const merged = [...realList, ...filtered.filter((s) => !realPaymentIds.has(s.payment_id) && !realPaymentIds.has(s.id))];
 
     const offset = params?.offset || 0;
-    const limit = params?.limit || 50;
-    const slice = merged.slice(offset, offset + limit);
+    const requestedLimit = params?.limit || 50;
+    // Ensure that real entries plus the full 50 synthetic baseline remain visible together
+    const totalToTake = Math.max(requestedLimit, realList.length + 50);
+    const slice = merged.slice(offset, offset + totalToTake);
 
     return {
       data: slice,
       workflows: slice,
       total: merged.length,
-      limit: limit,
+      limit: totalToTake,
       offset: offset,
     };
   } catch {

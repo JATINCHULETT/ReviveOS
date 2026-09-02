@@ -178,35 +178,33 @@ export function generateSyntheticWorkflows(count: number = 2500): WorkflowSummar
 
   // Prepend escalated human review test cases with @revive-os.me emails
   const testInterventions = getSyntheticInterventions();
-  testInterventions.forEach((item, idx) => {
-    items.unshift({
-      id: item.id,
-      payment_id: item.payment_id,
-      amount: item.amount,
-      currency: item.currency,
-      customer_id: item.customer_id,
-      customer_email: item.customer_email,
-      customer_phone: item.customer_phone,
-      customer_success_count: item.customer_success_count,
-      customer_failed_count: item.customer_failed_count,
-      fraud_probability: item.fraud_probability,
-      return_probability: item.return_probability,
-      overall_risk: item.overall_risk,
-      expected_loss: item.expected_loss,
-      risk_action: item.risk_action,
-      failure_code: item.failure_code,
-      failure_reason: item.escalation_reason,
-      status: 'ESCALATED',
-      recovery_probability: item.recovery_probability,
-      selected_action: item.selected_action,
-      attempt_count: 1,
-      recovered: false,
-      created_at: item.created_at,
-      updated_at: item.created_at,
-    });
-  });
+  const interventionSummaries: WorkflowSummary[] = testInterventions.map((item) => ({
+    id: item.id,
+    payment_id: item.payment_id,
+    amount: item.amount,
+    currency: item.currency,
+    customer_id: item.customer_id,
+    customer_email: item.customer_email,
+    customer_phone: item.customer_phone,
+    customer_success_count: item.customer_success_count,
+    customer_failed_count: item.customer_failed_count,
+    fraud_probability: item.fraud_probability,
+    return_probability: item.return_probability,
+    overall_risk: item.overall_risk,
+    expected_loss: item.expected_loss,
+    risk_action: item.risk_action,
+    failure_code: item.failure_code,
+    failure_reason: item.escalation_reason,
+    status: 'ESCALATED',
+    recovery_probability: item.recovery_probability,
+    selected_action: item.selected_action,
+    attempt_count: 1,
+    recovered: false,
+    created_at: item.created_at,
+    updated_at: item.created_at,
+  }));
 
-  return items;
+  return [...interventionSummaries, ...items];
 }
 
 // Dedicated Synthetic Human Interventions with fake @revive-os.me emails
