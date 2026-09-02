@@ -77,6 +77,25 @@ export default function VoiceRecoveryPage() {
   };
 
   const fetchVoiceData = async () => {
+    // 1. Get locally dispatched calls from localStorage first
+    let localCalls: any[] = [];
+    try {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('revive_voice_dispatches') : null;
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        localCalls = parsed.map((c: any) => ({
+          call_sid: c.call_sid,
+          provider: 'twilio',
+          duration_seconds: 42,
+          customer_spoken: c.customer_spoken || `Customer spoken intent: ${c.intent}`,
+          intent: c.intent || 'PROMISE_TO_PAY',
+          ptp_date: c.intent === 'PROMISE_TO_PAY' ? 'in 2 days' : undefined,
+        }));
+      }
+    } catch (e) {
+      console.warn('Could not read revive_voice_dispatches from localStorage', e);
+    }
+
     try {
       const [callsRes, previewRes] = await Promise.all([
         fetch(`${API_BASE}/v1/voice`),
@@ -84,19 +103,44 @@ export default function VoiceRecoveryPage() {
       ]);
       if (callsRes.ok) {
         const d = await callsRes.json();
-        const realCalls = d.calls || [];
-        // Merge real calls on top of demo calls, deduplicating by call_sid
-        const realSids = new Set(realCalls.map((c: any) => c.call_sid));
-        const merged = [...realCalls, ...DEMO_VOICE_LOGS.filter((demo) => !realSids.has(demo.call_sid))];
+        const apiCalls = d.calls || [];
+        const seenSids = new Set<string>();
+        const merged: any[] = [];
+
+        // Local recent calls on very top
+        for (const c of localCalls) {
+          if (!seenSids.has(c.call_sid)) {
+            seenSids.add(c.call_sid);
+            merged.push(c);
+          }
+        }
+        // Backend DB calls
+        for (const c of apiCalls) {
+          if (!seenSids.has(c.call_sid)) {
+            seenSids.add(c.call_sid);
+            merged.push(c);
+          }
+        }
+        // Demo calls at bottom
+        for (const c of DEMO_VOICE_LOGS) {
+          if (!seenSids.has(c.call_sid)) {
+            seenSids.add(c.call_sid);
+            merged.push(c);
+          }
+        }
         setCalls(merged);
+      } else {
+        const seenSids = new Set(localCalls.map((c) => c.call_sid));
+        setCalls([...localCalls, ...DEMO_VOICE_LOGS.filter((demo) => !seenSids.has(demo.call_sid))]);
       }
       if (previewRes.ok) {
         const p = await previewRes.json();
         setPreview(p);
       }
     } catch (err) {
-      console.warn('Backend port 8080 not reachable, using offline demo voice calls:', err);
-      setCalls(DEMO_VOICE_LOGS);
+      console.warn('Backend port 8080 not reachable, using offline demo voice calls + local dispatches:', err);
+      const seenSids = new Set(localCalls.map((c) => c.call_sid));
+      setCalls([...localCalls, ...DEMO_VOICE_LOGS.filter((demo) => !seenSids.has(demo.call_sid))]);
     }
   };
 
