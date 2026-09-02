@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PhoneCall, Play, Mic, CheckCircle2, UserCheck, MessageSquare, Volume2, Shield } from 'lucide-react';
+import { PhoneCall, Play, Mic, CheckCircle2, UserCheck, MessageSquare, Volume2, Shield, Search } from 'lucide-react';
 import { BadgePulse } from '@/components/ui/AnimatedComponents';
+import { getWorkflows } from '@/lib/api';
+import { getSyntheticWorkflows } from '@/lib/syntheticDataset';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -43,11 +45,36 @@ export default function VoiceRecoveryPage() {
 
   // Custom Dial Modal State
   const [showDialModal, setShowDialModal] = useState(false);
+  const [availableWorkflows, setAvailableWorkflows] = useState<any[]>(() => getSyntheticWorkflows().slice(0, 50));
+  const [workflowSearch, setWorkflowSearch] = useState('');
   const [customWorkflowId, setCustomWorkflowId] = useState('');
   const [customName, setCustomName] = useState('Rajesh Sharma');
   const [customEmail, setCustomEmail] = useState('rajesh.sharma@example.com');
   const [customPhone, setCustomPhone] = useState('+919876543210');
   const [customAmount, setCustomAmount] = useState('14999');
+
+  const loadWorkflowsList = async () => {
+    try {
+      const res = await getWorkflows({ limit: 100 });
+      if (res?.data && res.data.length > 0) {
+        setAvailableWorkflows(res.data);
+      }
+    } catch {
+      setAvailableWorkflows(getSyntheticWorkflows().slice(0, 50));
+    }
+  };
+
+  const handleSelectWorkflow = (wf: any) => {
+    setCustomWorkflowId(wf.id || wf.payment_id);
+    if (wf.customer_name) setCustomName(wf.customer_name);
+    else if (wf.customer_email) {
+      const prefix = wf.customer_email.split('@')[0].replace(/[._0-9]/g, ' ');
+      setCustomName(prefix.charAt(0).toUpperCase() + prefix.slice(1));
+    }
+    if (wf.customer_email) setCustomEmail(wf.customer_email);
+    if (wf.customer_phone) setCustomPhone(wf.customer_phone);
+    if (wf.amount) setCustomAmount(String(wf.amount));
+  };
 
   const fetchVoiceData = async () => {
     try {
@@ -75,6 +102,7 @@ export default function VoiceRecoveryPage() {
 
   useEffect(() => {
     fetchVoiceData();
+    loadWorkflowsList();
   }, []);
 
   const triggerCallSimulation = async (e?: React.FormEvent) => {
@@ -186,15 +214,40 @@ export default function VoiceRecoveryPage() {
             </div>
 
             <form onSubmit={triggerCallSimulation} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Workflow Search & Dropdown Selector */}
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                  Target Workflow ID (Optional / Direct Ledger Link)
+                  Select Workflow (Autofills Customer Email & Amount)
                 </label>
-                <input
-                  type="text"
+                <div style={{ position: 'relative', marginBottom: '8px' }}>
+                  <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  <input
+                    type="text"
+                    value={workflowSearch}
+                    onChange={(e) => setWorkflowSearch(e.target.value)}
+                    placeholder="Search workflows by email, ID, or amount..."
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px 8px 34px',
+                      borderRadius: '8px',
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-subtle)',
+                      color: 'var(--text-primary)',
+                      fontSize: '12.5px',
+                    }}
+                  />
+                </div>
+
+                <select
                   value={customWorkflowId}
-                  onChange={(e) => setCustomWorkflowId(e.target.value)}
-                  placeholder="e.g. wf_esc_revive_101 or UUID"
+                  onChange={(e) => {
+                    const selected = availableWorkflows.find((w: any) => (w.id || w.payment_id) === e.target.value);
+                    if (selected) {
+                      handleSelectWorkflow(selected);
+                    } else {
+                      setCustomWorkflowId(e.target.value);
+                    }
+                  }}
                   style={{
                     width: '100%',
                     padding: '10px 14px',
@@ -202,13 +255,49 @@ export default function VoiceRecoveryPage() {
                     background: 'var(--bg-tertiary)',
                     border: '1px solid var(--border-subtle)',
                     color: 'var(--text-primary)',
-                    fontSize: '13.5px',
-                    fontFamily: 'monospace',
+                    fontSize: '13px',
+                    cursor: 'pointer',
                   }}
-                />
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
-                  Provide a workflow ID to directly lodge this call and replies into that specific workflow timeline.
-                </span>
+                >
+                  <option value="">-- Choose from Active Workflows --</option>
+                  {availableWorkflows
+                    .filter((wf: any) => {
+                      if (!workflowSearch) return true;
+                      const q = workflowSearch.toLowerCase();
+                      const email = (wf.customer_email || '').toLowerCase();
+                      const id = (wf.id || wf.payment_id || '').toLowerCase();
+                      const amt = String(wf.amount || '');
+                      return email.includes(q) || id.includes(q) || amt.includes(q);
+                    })
+                    .slice(0, 30)
+                    .map((wf: any) => (
+                      <option key={wf.id || wf.payment_id} value={wf.id || wf.payment_id}>
+                        {wf.customer_email || 'User'} — ₹{wf.amount?.toLocaleString('en-IN') || 0} ({wf.payment_id?.substring(0, 15)}...)
+                      </option>
+                    ))}
+                </select>
+
+                {/* Workflow Summary Badge */}
+                {customWorkflowId && (
+                  <div style={{
+                    marginTop: '8px',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    background: 'rgba(59, 130, 246, 0.08)',
+                    border: '1px solid rgba(59, 130, 246, 0.2)',
+                    fontSize: '12px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}>
+                    <span style={{ color: '#60a5fa', fontWeight: 600 }}>
+                      Linked: {customWorkflowId.substring(0, 18)}...
+                    </span>
+                    <span style={{ color: 'var(--color-emerald)', fontWeight: 700 }}>
+                      ₹{parseFloat(customAmount || '0').toLocaleString('en-IN')} Due
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -221,28 +310,6 @@ export default function VoiceRecoveryPage() {
                   value={customName}
                   onChange={(e) => setCustomName(e.target.value)}
                   placeholder="e.g. Rajesh Sharma"
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    background: 'var(--bg-tertiary)',
-                    border: '1px solid var(--border-subtle)',
-                    color: 'var(--text-primary)',
-                    fontSize: '13.5px',
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                  Customer Email (Linked to Workflow Ledger)
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={customEmail}
-                  onChange={(e) => setCustomEmail(e.target.value)}
-                  placeholder="e.g. rajesh.sharma@example.com"
                   style={{
                     width: '100%',
                     padding: '10px 14px',
@@ -280,26 +347,10 @@ export default function VoiceRecoveryPage() {
                 </span>
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                  Pending Due Amount (₹ INR)
-                </label>
-                <input
-                  type="number"
-                  required
-                  value={customAmount}
-                  onChange={(e) => setCustomAmount(e.target.value)}
-                  placeholder="14999"
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    background: 'var(--bg-tertiary)',
-                    border: '1px solid var(--border-subtle)',
-                    color: 'var(--text-primary)',
-                    fontSize: '13.5px',
-                  }}
-                />
+              <div style={{ display: 'none' }}>
+                {/* Hidden auto-fetched email and amount stored in payload */}
+                <input type="hidden" value={customEmail} />
+                <input type="hidden" value={customAmount} />
               </div>
 
               <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
