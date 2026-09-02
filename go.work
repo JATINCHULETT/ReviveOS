@@ -8,6 +8,10 @@ use (
 	./packages/schemas
 	./packages/types
 	./packages/utils
+	./packages/receivables
+	./packages/voice
+	./packages/ptp
+	./packages/checkout
 	./services
 	./simulator
 	./cmd/seed_data

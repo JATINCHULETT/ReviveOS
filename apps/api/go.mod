@@ -11,6 +11,10 @@ require (
 	github.com/reviveos/services v0.0.0-00010101000000-000000000000
 	github.com/reviveos/utils v0.0.0-00010101000000-000000000000
 	github.com/reviveos/worker v0.0.0-00010101000000-000000000000
+	github.com/reviveos/receivables v0.0.0-00010101000000-000000000000
+	github.com/reviveos/voice v0.0.0-00010101000000-000000000000
+	github.com/reviveos/ptp v0.0.0-00010101000000-000000000000
+	github.com/reviveos/checkout v0.0.0-00010101000000-000000000000
 )
 
 replace github.com/reviveos/packages/recovery => ../../packages/recovery
@@ -26,3 +30,12 @@ replace github.com/reviveos/services => ../../services
 replace github.com/reviveos/utils => ../../packages/utils
 
 replace github.com/reviveos/worker => ../worker
+
+replace github.com/reviveos/receivables => ../../packages/receivables
+
+replace github.com/reviveos/voice => ../../packages/voice
+
+replace github.com/reviveos/ptp => ../../packages/ptp
+
+replace github.com/reviveos/checkout => ../../packages/checkout
+
