@@ -74,11 +74,30 @@ export async function getWorkflows(params?: {
 
     const qs = query.toString();
     const res = await fetchJSON<WorkflowsResponse>(`/workflows${qs ? `?${qs}` : ''}`);
-    const list = res.data || res.workflows || [];
-    if (list.length > 0 && res.total >= 1000) {
-      return res;
+    const realList = res.data || res.workflows || [];
+    
+    // Always fetch synthetic base
+    const all = getSyntheticWorkflows();
+    let filtered = all;
+    if (params?.status && params.status !== 'ALL') {
+      filtered = all.filter((w) => w.status === params.status);
     }
-    throw new Error('Fallback to synthetic 2500 dataset');
+
+    // Merge real database workflows at the top, deduplicating by payment_id / id
+    const realPaymentIds = new Set(realList.map((r: any) => r.payment_id || r.id));
+    const merged = [...realList, ...filtered.filter((s) => !realPaymentIds.has(s.payment_id) && !realPaymentIds.has(s.id))];
+
+    const offset = params?.offset || 0;
+    const limit = params?.limit || 50;
+    const slice = merged.slice(offset, offset + limit);
+
+    return {
+      data: slice,
+      workflows: slice,
+      total: merged.length,
+      limit: limit,
+      offset: offset,
+    };
   } catch {
     // Return filtered slice of 2,500 synthetic dataset
     const all = getSyntheticWorkflows();
@@ -289,16 +308,18 @@ export async function createSandboxPaymentLink(data: {
 }
 
 export async function getInterventions(merchantId?: string): Promise<{ data: any[]; total: number }> {
+  const synthetic = getSyntheticInterventions();
   try {
     const qs = merchantId ? `?merchant_id=${encodeURIComponent(merchantId)}` : '';
     const res = await fetchJSON<{ data: any[]; total?: number }>(`/workflows/interventions${qs}`);
-    if (res && res.data && res.data.length > 0) {
-      return { data: res.data, total: res.total || res.data.length };
-    }
-    const synthetic = getSyntheticInterventions();
-    return { data: synthetic, total: synthetic.length };
+    const realList = res?.data || [];
+    
+    // Always include synthetic interventions, but place real database interventions at the very top
+    const realPaymentIds = new Set(realList.map((r: any) => r.payment_id || r.id));
+    const merged = [...realList, ...synthetic.filter((s: any) => !realPaymentIds.has(s.payment_id) && !realPaymentIds.has(s.id))];
+
+    return { data: merged, total: merged.length };
   } catch {
-    const synthetic = getSyntheticInterventions();
     return { data: synthetic, total: synthetic.length };
   }
 }
