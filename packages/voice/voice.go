@@ -132,15 +132,16 @@ func (t *TwilioVoiceProvider) InitiateCall(ctx context.Context, payload CallPayl
 	}
 
 	targetNumber := payload.Phone
-	if targetNumber == "" || strings.HasPrefix(t.AccountSID, "AC") && (t.CallerID == "+15005550006" || t.CallerID == "") {
-		// If running in Twilio Test credentials mode, test number is used
+	if targetNumber == "" {
 		targetNumber = "+15005550006"
 	}
 
 	form := url.Values{}
 	form.Set("From", caller)
 	form.Set("To", targetNumber)
-	form.Set("Url", "http://demo.twilio.com/docs/voice.xml") // Standard TwiML or webhook
+	// Dynamic TwiML speaking the vernacular Hinglish script
+	twimlContent := fmt.Sprintf("<Response><Say language=\"hi-IN\" voice=\"Polly.Aditi\">%s</Say></Response>", script)
+	form.Set("Twiml", twimlContent)
 
 	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, strings.NewReader(form.Encode()))
 	if err != nil {
