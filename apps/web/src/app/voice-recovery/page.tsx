@@ -227,22 +227,24 @@ export default function VoiceRecoveryPage() {
         <button
           onClick={() => setShowDialModal(true)}
           disabled={calling}
+          className="btn-primary"
           style={{
-            padding: '10px 20px',
-            background: 'var(--primary)',
-            color: '#fff',
+            padding: '11px 22px',
+            background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
+            color: '#ffffff',
             border: 'none',
-            borderRadius: '8px',
+            borderRadius: '10px',
             fontWeight: 700,
             fontSize: '13.5px',
             cursor: 'pointer',
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
             gap: '8px',
+            boxShadow: '0 4px 14px rgba(139, 92, 246, 0.4)',
           }}
         >
-          <PhoneCall size={16} />
-          {calling ? 'Calling Target...' : 'Dial Custom Number (Hinglish)'}
+          <PhoneCall size={16} color="#ffffff" />
+          <span>{calling ? 'Calling Target...' : 'Dial Custom Number (Hinglish)'}</span>
         </button>
       </div>
 
@@ -323,14 +325,16 @@ export default function VoiceRecoveryPage() {
                     width: '100%',
                     padding: '10px 14px',
                     borderRadius: '8px',
-                    background: 'var(--bg-tertiary)',
-                    border: '1px solid var(--border-subtle)',
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-default)',
                     color: 'var(--text-primary)',
                     fontSize: '13px',
                     cursor: 'pointer',
                   }}
                 >
-                  <option value="">-- Choose from Active Workflows --</option>
+                  <option value="" style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}>
+                    -- Choose from Active Workflows --
+                  </option>
                   {availableWorkflows
                     .filter((wf: any) => {
                       if (!workflowSearch) return true;
@@ -340,12 +344,19 @@ export default function VoiceRecoveryPage() {
                       const amt = String(wf.amount || '');
                       return email.includes(q) || id.includes(q) || amt.includes(q);
                     })
-                    .slice(0, 30)
-                    .map((wf: any) => (
-                      <option key={wf.id || wf.payment_id} value={wf.id || wf.payment_id}>
-                        {wf.customer_email || 'User'} — ₹{wf.amount?.toLocaleString('en-IN') || 0} ({wf.payment_id?.substring(0, 15)}...)
-                      </option>
-                    ))}
+                    .map((wf: any) => {
+                      const wfKey = wf.id || wf.payment_id;
+                      const displayCustomer = wf.customer_name || (wf.customer_email ? wf.customer_email.split('@')[0] : 'Customer');
+                      return (
+                        <option
+                          key={wfKey}
+                          value={wfKey}
+                          style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}
+                        >
+                          {wfKey.slice(0, 16)}... | {displayCustomer} | ₹{Number(wf.amount || 0).toLocaleString()}
+                        </option>
+                      );
+                    })}
                 </select>
 
                 {/* Workflow Summary Badge */}

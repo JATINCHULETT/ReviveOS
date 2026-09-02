@@ -43,27 +43,87 @@ export default function PTPTrackerPage() {
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
 
   const fetchPTP = async () => {
+    // 1. Read local voice recovery dispatches that committed to pay
+    let localPtpRecords: any[] = [];
+    try {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('revive_voice_dispatches') : null;
+      if (stored) {
+        const dispatches = JSON.parse(stored);
+        localPtpRecords = dispatches
+          .filter((d: any) => !d.intent || d.intent === 'PROMISE_TO_PAY')
+          .map((d: any) => {
+            const dueDate = new Date(Date.now() + 48 * 3600 * 1000);
+            return {
+              id: `ptp_${(d.call_sid || 'voice').replace(/[^a-zA-Z0-9]/g, '').slice(-8)}`,
+              customer_name: d.customer_name || 'Customer',
+              customer_contact: d.phone || d.customer_email || 'Phone Call',
+              promised_amount: Number(d.amount) || 14999,
+              promised_date: dueDate.toISOString(),
+              status: 'PENDING',
+              recorded_channel: 'VOICE_AGENT (Hinglish)',
+            };
+          });
+      }
+    } catch (e) {
+      console.warn('Error reading voice dispatches for PTP tracker:', e);
+    }
+
     try {
       const res = await fetch(`${API_BASE}/v1/ptp`);
       if (res.ok) {
         const data = await res.json();
         const realPromises = data.promises || [];
-        const realIds = new Set(realPromises.map((p: any) => p.id));
-        const merged = [...realPromises, ...DEMO_PTP_PROMISES.filter((demo) => !realIds.has(demo.id))];
+        const seenIds = new Set<string>();
+        const merged: any[] = [];
+
+        // Voice commitments on very top
+        for (const p of localPtpRecords) {
+          if (!seenIds.has(p.id)) {
+            seenIds.add(p.id);
+            merged.push(p);
+          }
+        }
+        for (const p of realPromises) {
+          if (!seenIds.has(p.id)) {
+            seenIds.add(p.id);
+            merged.push(p);
+          }
+        }
+        for (const p of DEMO_PTP_PROMISES) {
+          if (!seenIds.has(p.id)) {
+            seenIds.add(p.id);
+            merged.push(p);
+          }
+        }
+
         setPromises(merged);
-        setMetrics(data.metrics || null);
+
+        // Calculate dynamic metrics based on all active commitments
+        const totalCommitted = merged.reduce((acc: number, curr: any) => acc + (Number(curr.promised_amount) || 0), 0);
+        const totalRecovered = merged.filter((p: any) => p.status === 'HONORED').reduce((acc: number, curr: any) => acc + (Number(curr.promised_amount) || 0), 0);
+        setMetrics({
+          total_commitments: merged.length,
+          committed_amount: totalCommitted,
+          recovered_amount: totalRecovered || 6500,
+          fulfillment_rate: data.metrics?.fulfillment_rate || 100.0,
+        });
         return;
       }
     } catch (err) {
-      console.warn('Backend port 8080 not reachable, using offline demo PTP tracker:', err);
-      setPromises(DEMO_PTP_PROMISES);
+      console.warn('Backend port 8080 not reachable, using offline demo PTP tracker + voice dispatches:', err);
     } finally {
       setLoading(false);
     }
+
+    const seenIds = new Set(localPtpRecords.map((p) => p.id));
+    const fallbackMerged = [...localPtpRecords, ...DEMO_PTP_PROMISES.filter((demo) => !seenIds.has(demo.id))];
+    setPromises(fallbackMerged);
+    const totalCommitted = fallbackMerged.reduce((acc: number, curr: any) => acc + (Number(curr.promised_amount) || 0), 0);
+    const totalRecovered = fallbackMerged.filter((p: any) => p.status === 'HONORED').reduce((acc: number, curr: any) => acc + (Number(curr.promised_amount) || 0), 0);
     setMetrics({
-      total_commitments: 3,
-      committed_amount: 57000,
-      recovered_amount: 6500,
+      total_commitments: fallbackMerged.length,
+      committed_amount: totalCommitted,
+      recovered_amount: totalRecovered || 6500,
       fulfillment_rate: 100.0,
     });
   };

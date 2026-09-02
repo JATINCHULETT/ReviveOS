@@ -276,8 +276,10 @@ a {
   border-bottom: 1px solid var(--border-subtle);
 }
 
-/* Inputs */
-.input {
+/* Inputs & Dropdowns */
+.input,
+select,
+textarea {
   width: 100%;
   padding: 10px 14px;
   border-radius: var(--radius-md);
@@ -290,9 +292,43 @@ a {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.input:focus {
+.input:focus,
+select:focus,
+textarea:focus {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 3px var(--color-accent-bg);
+}
+
+/* Ensure dropdown options are always readable across dark and light themes */
+select option {
+  background-color: #12121a;
+  color: #ffffff;
+  padding: 8px 12px;
+}
+
+.light select option {
+  background-color: #ffffff;
+  color: #09090b;
+}
+
+/* Button overrides for light mode visibility */
+.btn-primary,
+button.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: 14px;
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%) !important;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.35);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
 }
 
 /* Range Slider */
