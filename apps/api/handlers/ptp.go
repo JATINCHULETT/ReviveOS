@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -17,12 +18,65 @@ func PTPHandler(pool *pgxpool.Pool) http.HandlerFunc {
 
 		switch r.Method {
 		case http.MethodGet:
-			// Fetch PTP tracker items and summary metrics
-			promises := getSamplePromises()
+			// Fetch PTP tracker items from database first
+			var dbPromises []ptp.PromiseRecord
+			if pool != nil {
+				rows, qErr := pool.Query(r.Context(), `
+					SELECT 
+						id::text,
+						COALESCE(customer_name, ''),
+						customer_contact,
+						promised_amount::float8,
+						promised_date,
+						status,
+						COALESCE(recorded_channel, 'VOICE_AGENT'),
+						extension_count,
+						created_at,
+						updated_at
+					FROM promise_to_pay_records
+					ORDER BY created_at DESC
+					LIMIT 50
+				`)
+				if qErr == nil {
+					defer rows.Close()
+					for rows.Next() {
+						var pr ptp.PromiseRecord
+						var statusStr string
+						if err := rows.Scan(
+							&pr.ID,
+							&pr.CustomerName,
+							&pr.CustomerContact,
+							&pr.PromisedAmount,
+							&pr.PromisedDate,
+							&statusStr,
+							&pr.RecordedChannel,
+							&pr.ExtensionCount,
+							&pr.CreatedAt,
+							&pr.UpdatedAt,
+						); err == nil {
+							pr.Status = ptp.PTPStatus(statusStr)
+							dbPromises = append(dbPromises, pr)
+						}
+					}
+				}
+			}
+
+			// Merge with sample promises
+			samplePromises := getSamplePromises()
+			promiseSet := make(map[string]bool)
+			for _, p := range dbPromises {
+				promiseSet[p.ID] = true
+			}
+			for _, s := range samplePromises {
+				if !promiseSet[s.ID] {
+					dbPromises = append(dbPromises, s)
+				}
+			}
+
 			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"status":   "ok",
-				"promises": promises,
-				"metrics":  calculatePTPMetrics(promises),
+				"promises": dbPromises,
+				"metrics":  calculatePTPMetrics(dbPromises),
 			})
 
 		case http.MethodPost:
@@ -34,7 +88,45 @@ func PTPHandler(pool *pgxpool.Pool) http.HandlerFunc {
 				}
 				_ = json.NewDecoder(r.Body).Decode(&req)
 
-				// Status updated to HONORED
+				if pool != nil {
+					var contact string
+					_ = pool.QueryRow(r.Context(), `
+						UPDATE promise_to_pay_records 
+						SET status = 'HONORED', updated_at = CURRENT_TIMESTAMP
+						WHERE id::text = $1
+						RETURNING customer_contact
+					`, req.PromiseID).Scan(&contact)
+
+					if contact != "" {
+						var wfID string
+						_ = pool.QueryRow(r.Context(), `
+							SELECT rw.id::text 
+							FROM recovery_workflows rw
+							JOIN payments p ON rw.payment_id = p.id
+							JOIN customers c ON p.customer_id = c.id
+							WHERE c.phone = $1 OR c.email = $1
+							ORDER BY rw.created_at DESC LIMIT 1
+						`, contact).Scan(&wfID)
+
+						if wfID != "" {
+							_, _ = pool.Exec(r.Context(), `
+								INSERT INTO recovery_actions (workflow_id, action_type, status, attempt, result, executed_at)
+								VALUES ($1, 'PTP_HONORED', 'EXECUTED', 1, $2, CURRENT_TIMESTAMP)
+							`, wfID, fmt.Sprintf("Customer honored commitment %s", req.PromiseID))
+
+							metaBytes, _ := json.Marshal(map[string]interface{}{
+								"promise_id": req.PromiseID,
+								"is_paid":    req.IsPaid,
+								"status":     "HONORED",
+							})
+							_, _ = pool.Exec(r.Context(), `
+								INSERT INTO audit_events (workflow_id, actor, action, metadata, timestamp)
+								VALUES ($1, 'system:ptp_tracker', 'PTP_HONORED_AND_RECONCILED', $2, CURRENT_TIMESTAMP)
+							`, wfID, metaBytes)
+						}
+					}
+				}
+
 				_ = json.NewEncoder(w).Encode(map[string]interface{}{
 					"status":      "updated",
 					"promise_id":  req.PromiseID,
@@ -56,6 +148,17 @@ func PTPHandler(pool *pgxpool.Pool) http.HandlerFunc {
 				}
 
 				newDate := time.Now().Add(time.Duration(req.Days) * 24 * time.Hour)
+				if pool != nil {
+					_, _ = pool.Exec(r.Context(), `
+						UPDATE promise_to_pay_records
+						SET status = 'EXTENDED',
+						    promised_date = $1,
+						    extension_count = extension_count + 1,
+						    updated_at = CURRENT_TIMESTAMP
+						WHERE id::text = $2
+					`, newDate, req.PromiseID)
+				}
+
 				_ = json.NewEncoder(w).Encode(map[string]interface{}{
 					"status":             "extended",
 					"promise_id":         req.PromiseID,

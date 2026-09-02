@@ -26,14 +26,15 @@ const (
 
 // CallPayload represents parameters for initiating a Hinglish AI Voice call
 type CallPayload struct {
-	MerchantID   string    `json:"merchant_id"`
-	CustomerID   string    `json:"customer_id"`
-	CustomerName string    `json:"customer_name"`
-	Phone        string    `json:"phone"`
-	Amount       float64   `json:"amount"`
-	Currency     string    `json:"currency"`
-	InvoiceRef   string    `json:"invoice_ref,omitempty"`
-	DueDate      time.Time `json:"due_date"`
+	MerchantID    string    `json:"merchant_id"`
+	CustomerID    string    `json:"customer_id"`
+	CustomerName  string    `json:"customer_name"`
+	CustomerEmail string    `json:"customer_email,omitempty"`
+	Phone         string    `json:"phone"`
+	Amount        float64   `json:"amount"`
+	Currency      string    `json:"currency"`
+	InvoiceRef    string    `json:"invoice_ref,omitempty"`
+	DueDate       time.Time `json:"due_date"`
 }
 
 // CallResult contains result of voice execution

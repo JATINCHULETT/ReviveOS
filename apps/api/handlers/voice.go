@@ -45,12 +45,59 @@ func VoiceRecoveryHandler(pool *pgxpool.Pool) http.HandlerFunc {
 				return
 			}
 
-			// List voice logs
-			logs := getSampleVoiceCalls()
+			// List voice logs from database first
+			var dbCalls []voice.CallResult
+			if pool != nil {
+				rows, qErr := pool.Query(r.Context(), `
+					SELECT 
+						COALESCE(provider_call_sid, id::text),
+						provider,
+						call_status,
+						COALESCE(hinglish_script, ''),
+						COALESCE(customer_response, ''),
+						COALESCE(intent_detected, 'PROMISE_TO_PAY'),
+						duration_seconds
+					FROM voice_recovery_calls
+					ORDER BY created_at DESC
+					LIMIT 50
+				`)
+				if qErr == nil {
+					defer rows.Close()
+					for rows.Next() {
+						var cr voice.CallResult
+						var intentStr string
+						if err := rows.Scan(
+							&cr.CallSID,
+							&cr.Provider,
+							&cr.Status,
+							&cr.HinglishScript,
+							&cr.CustomerSpoken,
+							&intentStr,
+							&cr.DurationSec,
+						); err == nil {
+							cr.Intent = voice.Intent(intentStr)
+							dbCalls = append(dbCalls, cr)
+						}
+					}
+				}
+			}
+
+			// Merge database records with sample baseline
+			sampleLogs := getSampleVoiceCalls()
+			existingSids := make(map[string]bool)
+			for _, c := range dbCalls {
+				existingSids[c.CallSID] = true
+			}
+			for _, s := range sampleLogs {
+				if !existingSids[s.CallSID] {
+					dbCalls = append(dbCalls, s)
+				}
+			}
+
 			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"status": "ok",
-				"calls":  logs,
-				"total":  len(logs),
+				"calls":  dbCalls,
+				"total":  len(dbCalls),
 			})
 
 		case http.MethodPost:
@@ -115,6 +162,70 @@ func VoiceRecoveryHandler(pool *pgxpool.Pool) http.HandlerFunc {
 				return
 			}
 			result.Provider = providerName
+
+			// Lodge call, customer transcript intent, and link into workflow audit trail
+			if pool != nil {
+				var ptpID *string
+				// If customer committed a promise to pay date, lodge PTP record
+				if result.Intent == voice.IntentPromiseToPay {
+					var createdPtpID string
+					ptpDate := time.Now().Add(24 * time.Hour)
+					if result.PTPDate != nil {
+						ptpDate = *result.PTPDate
+					}
+					_ = pool.QueryRow(r.Context(), `
+						INSERT INTO promise_to_pay_records (
+							customer_id, customer_name, customer_contact, promised_amount, promised_date, status, recorded_channel, notes
+						) VALUES ($1, $2, $3, $4, $5, 'PENDING', 'VOICE_AGENT', $6)
+						RETURNING id::text
+					`, callReq.CustomerID, callReq.CustomerName, callReq.Phone, callReq.Amount, ptpDate, "Committed during Hinglish AI voice call").Scan(&createdPtpID)
+					if createdPtpID != "" {
+						ptpID = &createdPtpID
+					}
+				}
+
+				// Lodge into voice_recovery_calls
+				_, _ = pool.Exec(r.Context(), `
+					INSERT INTO voice_recovery_calls (
+						recipient_phone, customer_name, amount, currency, language, provider, provider_call_sid, call_status,
+						duration_seconds, hinglish_script, customer_response, intent_detected, ptp_created_id
+					) VALUES ($1, $2, $3, $4, 'Hinglish', $5, $6, $7, $8, $9, $10, $11, $12)
+				`, callReq.Phone, callReq.CustomerName, callReq.Amount, callReq.Currency, providerName, result.CallSID,
+					result.Status, result.DurationSec, script, result.CustomerSpoken, string(result.Intent), ptpID)
+
+				// Lodge into recovery_workflows audit log if customer exists
+				var wfID string
+				_ = pool.QueryRow(r.Context(), `
+					SELECT rw.id::text 
+					FROM recovery_workflows rw
+					JOIN payments p ON rw.payment_id = p.id
+					JOIN customers c ON p.customer_id = c.id
+					WHERE c.phone = $1 OR c.email = $2
+					ORDER BY rw.created_at DESC LIMIT 1
+				`, callReq.Phone, callReq.CustomerEmail).Scan(&wfID)
+
+				if wfID != "" {
+					// Add action and audit trail
+					_, _ = pool.Exec(r.Context(), `
+						INSERT INTO recovery_actions (workflow_id, action_type, status, attempt, result, executed_at)
+						VALUES ($1, 'VOICE_RECOVERY_CALL', 'EXECUTED', 1, $2, CURRENT_TIMESTAMP)
+					`, wfID, fmt.Sprintf("Hinglish Call %s: Customer intent: %s. %s", result.CallSID, result.Intent, result.CustomerSpoken))
+
+					// Record audit event
+					metaBytes, _ := json.Marshal(map[string]interface{}{
+						"phone":           callReq.Phone,
+						"customer_name":   callReq.CustomerName,
+						"call_sid":        result.CallSID,
+						"spoken_response": result.CustomerSpoken,
+						"intent":          result.Intent,
+						"provider":        providerName,
+					})
+					_, _ = pool.Exec(r.Context(), `
+						INSERT INTO audit_events (workflow_id, actor, action, metadata, timestamp)
+						VALUES ($1, 'system:voice_agent', 'VOICE_CALL_DISPATCHED', $2, CURRENT_TIMESTAMP)
+					`, wfID, metaBytes)
+				}
+			}
 
 			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"status":         "initiated",

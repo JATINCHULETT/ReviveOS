@@ -19,12 +19,70 @@ func CheckoutDropoffHandler(pool *pgxpool.Pool) http.HandlerFunc {
 
 		switch r.Method {
 		case http.MethodGet:
-			// List dropped off checkout sessions & recovery funnel metrics
-			sessions := getSampleCheckoutSessions()
+			// List dropped off checkout sessions & recovery funnel metrics from database
+			var dbSessions []checkout.Session
+			if pool != nil {
+				rows, qErr := pool.Query(r.Context(), `
+					SELECT 
+						id::text,
+						session_token,
+						COALESCE(customer_name, ''),
+						COALESCE(customer_email, ''),
+						COALESCE(customer_phone, ''),
+						cart_amount::float8,
+						currency,
+						step_reached,
+						status,
+						COALESCE(drop_off_reason, 'Abandoned before payment completion'),
+						created_at,
+						updated_at
+					FROM checkout_sessions
+					ORDER BY created_at DESC
+					LIMIT 50
+				`)
+				if qErr == nil {
+					defer rows.Close()
+					for rows.Next() {
+						var s checkout.Session
+						var stepStr, statusStr string
+						if err := rows.Scan(
+							&s.ID,
+							&s.SessionToken,
+							&s.CustomerName,
+							&s.CustomerEmail,
+							&s.CustomerPhone,
+							&s.CartAmount,
+							&s.Currency,
+							&stepStr,
+							&statusStr,
+							&s.DropOffReason,
+							&s.CreatedAt,
+							&s.UpdatedAt,
+						); err == nil {
+							s.StepReached = stepStr
+							s.Status = checkout.SessionStatus(statusStr)
+							dbSessions = append(dbSessions, s)
+						}
+					}
+				}
+			}
+
+			// Merge with sample sessions
+			sampleSessions := getSampleCheckoutSessions()
+			tokenSet := make(map[string]bool)
+			for _, s := range dbSessions {
+				tokenSet[s.SessionToken] = true
+			}
+			for _, s := range sampleSessions {
+				if !tokenSet[s.SessionToken] {
+					dbSessions = append(dbSessions, s)
+				}
+			}
+
 			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"status":   "ok",
-				"sessions": sessions,
-				"funnel":   calculateDropoffFunnel(sessions),
+				"sessions": dbSessions,
+				"funnel":   calculateDropoffFunnel(dbSessions),
 			})
 
 		case http.MethodPost:
@@ -45,6 +103,49 @@ func CheckoutDropoffHandler(pool *pgxpool.Pool) http.HandlerFunc {
 				}
 				recoveryLink := checkout.GenerateRecoveryLink(baseURL, req.SessionToken)
 
+				// Update session status in database and log recovery action in workflow
+				if pool != nil {
+					var custEmail string
+					_ = pool.QueryRow(r.Context(), `
+						UPDATE checkout_sessions 
+						SET status = 'RECOVERY_DISPATCHED', 
+						    updated_at = CURRENT_TIMESTAMP
+						WHERE session_token = $1
+						RETURNING COALESCE(customer_email, '')
+					`, req.SessionToken).Scan(&custEmail)
+
+					// Log into recovery_workflows audit trail if workflow exists
+					if custEmail != "" {
+						var wfID string
+						_ = pool.QueryRow(r.Context(), `
+							SELECT rw.id::text 
+							FROM recovery_workflows rw
+							JOIN payments p ON rw.payment_id = p.id
+							JOIN customers c ON p.customer_id = c.id
+							WHERE c.email = $1
+							ORDER BY rw.created_at DESC LIMIT 1
+						`, custEmail).Scan(&wfID)
+
+						if wfID != "" {
+							_, _ = pool.Exec(r.Context(), `
+								INSERT INTO recovery_actions (workflow_id, action_type, status, attempt, result, executed_at)
+								VALUES ($1, 'CHECKOUT_RECOVERY_LINK', 'EXECUTED', 1, $2, CURRENT_TIMESTAMP)
+							`, wfID, fmt.Sprintf("1-Click cart restore link dispatched via %s: %s", req.Channel, recoveryLink))
+
+							metaBytes, _ := json.Marshal(map[string]interface{}{
+								"session_token": req.SessionToken,
+								"channel":       req.Channel,
+								"recovery_link": recoveryLink,
+								"provider":      "Resend",
+							})
+							_, _ = pool.Exec(r.Context(), `
+								INSERT INTO audit_events (workflow_id, actor, action, metadata, timestamp)
+								VALUES ($1, 'system:checkout_recovery', 'CART_RECOVERY_DISPATCHED', $2, CURRENT_TIMESTAMP)
+							`, wfID, metaBytes)
+						}
+					}
+				}
+
 				_ = json.NewEncoder(w).Encode(map[string]interface{}{
 					"status":         "recovery_dispatched",
 					"session_token":  req.SessionToken,
@@ -57,7 +158,7 @@ func CheckoutDropoffHandler(pool *pgxpool.Pool) http.HandlerFunc {
 				return
 			}
 
-			// Track/Create checkout session
+			// Track/Create checkout session in database
 			var session checkout.Session
 			if err := json.NewDecoder(r.Body).Decode(&session); err != nil {
 				http.Error(w, `{"error":"invalid session payload"}`, http.StatusBadRequest)
@@ -77,6 +178,20 @@ func CheckoutDropoffHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			session.RecoveryLink = checkout.GenerateRecoveryLink(baseURL, session.SessionToken)
 			session.CreatedAt = time.Now()
 			session.UpdatedAt = time.Now()
+
+			if pool != nil {
+				_, _ = pool.Exec(r.Context(), `
+					INSERT INTO checkout_sessions (
+						session_token, customer_name, customer_email, customer_phone, cart_amount, currency, step_reached, status, drop_off_reason
+					) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+					ON CONFLICT (session_token) DO UPDATE
+					SET step_reached = EXCLUDED.step_reached,
+					    status = EXCLUDED.status,
+					    drop_off_reason = EXCLUDED.drop_off_reason,
+					    updated_at = CURRENT_TIMESTAMP
+				`, session.SessionToken, session.CustomerName, session.CustomerEmail, session.CustomerPhone,
+					session.CartAmount, session.Currency, string(session.StepReached), string(session.Status), session.DropOffReason)
+			}
 
 			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"status":  "tracked",
