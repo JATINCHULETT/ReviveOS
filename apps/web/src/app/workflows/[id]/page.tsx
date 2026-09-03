@@ -298,7 +298,7 @@ export default function WorkflowDetailPage() {
           <div class="step">
             <div class="step-dot"></div>
             <div class="step-title">Stage 3: ML Model Prediction & Optimal Recovery Route</div>
-            <div class="step-desc">Predicted recovery probability ${(latestPred?.confidence_score ? (latestPred.confidence_score * 100).toFixed(0) : 88)}%. Channel recommendation: ${latestAI?.recommended_channel || 'WHATSAPP_VOICE'}.</div>
+            <div class="step-desc">Predicted recovery probability ${(latestPred?.probability ? (latestPred.probability * 100).toFixed(0) : ((latestPred as any)?.confidence_score ? ((latestPred as any).confidence_score * 100).toFixed(0) : 88))}%. Action recommendation: ${latestAI?.recommended_action || 'WHATSAPP_VOICE'}.</div>
             <div class="step-hash">Block: 0x77b01d... • Actor: ml:routing_model</div>
           </div>
           <div class="step">
@@ -310,7 +310,7 @@ export default function WorkflowDetailPage() {
           <div class="step">
             <div class="step-dot"></div>
             <div class="step-title">Stage 5: Strategy Selection & Timing Optimization</div>
-            <div class="step-desc">Selected strategy: ${latestAI?.recommended_channel || 'Hinglish AI Voice Telephony + WhatsApp Link'}. Target dispatch window optimal.</div>
+            <div class="step-desc">Selected strategy: ${latestAI?.recommended_action || 'Hinglish AI Voice Telephony + WhatsApp Link'}. Target dispatch window optimal.</div>
             <div class="step-hash">Block: 0x33cf81... • Actor: ai:cadence_scheduler</div>
           </div>
           <div class="step">

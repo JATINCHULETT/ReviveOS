@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { Building2, AlertCircle, Send, CheckCircle2, Clock, Calendar, ArrowUpRight, Plus, Edit2, FileText, Download, ShieldCheck, Link2, ExternalLink, X } from 'lucide-react';
 import { BadgePulse } from '@/components/ui/AnimatedComponents';
